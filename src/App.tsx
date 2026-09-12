@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { DirectionPicker } from './components/DirectionPicker';
 import { LocationPicker } from './components/LocationPicker';
 import { EntryForm, type EditTarget } from './components/EntryForm';
+import { InstallGuide, useAutoInstallGuide } from './components/InstallGuide';
 import { SavedList } from './components/SavedList';
 import { SyncBadge } from './components/SyncBadge';
 import { ToastProvider } from './components/Toast';
 import type { CardEntry } from './components/RecordCard';
 import type { Location } from './config';
 import { flushOutbox } from './offline/outbox';
+import { useInstallPrompt } from './hooks/useInstallPrompt';
 
 type Tab = 'entry' | 'saved';
 
@@ -17,6 +19,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('entry');
   const [edit, setEdit] = useState<EditTarget | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [installOpen, setInstallOpen] = useAutoInstallGuide();
+  const { installed } = useInstallPrompt();
 
   // Flush the offline outbox whenever connectivity returns.
   useEffect(() => {
@@ -76,7 +80,20 @@ export default function App() {
       </header>
 
       <main className="container">
-        {!location && !sheet && <LocationPicker onPick={pickLocation} />}
+        {!location && !sheet && (
+          <>
+            <LocationPicker onPick={pickLocation} />
+            {!installed && (
+              <button
+                type="button"
+                className="install-hint"
+                onClick={() => setInstallOpen(true)}
+              >
+                Install this app on your phone
+              </button>
+            )}
+          </>
+        )}
         {location && !sheet && (
           <DirectionPicker location={location} onPick={(s) => { setSheet(s); setTab('entry'); }} />
         )}
@@ -109,6 +126,8 @@ export default function App() {
           </>
         )}
       </main>
+
+      <InstallGuide open={installOpen} onClose={() => setInstallOpen(false)} />
     </ToastProvider>
   );
 }
