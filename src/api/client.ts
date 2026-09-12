@@ -16,6 +16,16 @@ import type { ApiErrorCode, ListResponse, OutreportRecord } from '../types';
 const BASE_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
 const TIMEOUT_MS = 30_000; // Apps Script cold starts take 1-3s; be generous
 
+// A build without the backend URL would otherwise fetch "undefined?..." from
+// the app's own origin, get index.html back via the SPA rewrite, and queue
+// every entry forever while blaming connectivity. Fail loudly instead.
+// (vite.config.ts also refuses to produce such a build.)
+if (!/^https?:\/\//.test(BASE_URL ?? '')) {
+  throw new Error(
+    'This build is missing VITE_APPS_SCRIPT_URL — redeploy with the Apps Script /exec URL set.',
+  );
+}
+
 /** Server said no. Terminal unless code is BUSY. */
 export class ApiError extends Error {
   code: ApiErrorCode;
@@ -41,16 +51,18 @@ interface Envelope {
 async function request(input: string, init?: RequestInit): Promise<Envelope> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  let res: Response;
+  let text: string;
   try {
-    res = await fetch(input, { ...init, signal: controller.signal });
+    // The timer must stay armed through res.text(): on flaky mobile links a
+    // response can stall mid-body after headers arrive, and an unbounded read
+    // would hang the single-flight outbox flush forever.
+    const res = await fetch(input, { ...init, signal: controller.signal });
+    text = await res.text();
   } catch (err) {
     throw new NetworkError(err instanceof Error ? err.message : 'Network request failed');
   } finally {
     clearTimeout(timer);
   }
-
-  const text = await res.text();
   let body: Envelope;
   try {
     body = JSON.parse(text);

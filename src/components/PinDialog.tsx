@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 
 interface Props {
   title: string;
@@ -38,6 +38,36 @@ export function forgetPin(): void {
 
 export function PinDialog({ title, message, confirmLabel, busy, error, onConfirm, onCancel }: Props) {
   const [pin, setPin] = useState(rememberedPin());
+  const dialogRef = useRef<HTMLFormElement>(null);
+
+  // Modal behavior: restore focus to the opener on close, close on Escape,
+  // and keep Tab cycling inside the dialog.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    return () => opener?.focus?.();
+  }, []);
+
+  function onKeyDown(e: KeyboardEvent<HTMLFormElement>) {
+    if (e.key === 'Escape' && !busy) {
+      e.preventDefault();
+      onCancel();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'input, button:not([disabled])',
+    );
+    if (!focusables || focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -46,7 +76,7 @@ export function PinDialog({ title, message, confirmLabel, busy, error, onConfirm
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-label={title}>
-      <form className="dialog" onSubmit={submit}>
+      <form className="dialog" onSubmit={submit} onKeyDown={onKeyDown} ref={dialogRef}>
         <h2>{title}</h2>
         <p>{message}</p>
         <input
@@ -60,7 +90,7 @@ export function PinDialog({ title, message, confirmLabel, busy, error, onConfirm
           aria-invalid={!!error}
           autoFocus
         />
-        {error && <div className="field-error">{error}</div>}
+        {error && <div className="field-error" role="alert">{error}</div>}
         <div className="dialog-actions">
           <button type="button" className="btn btn-quiet" onClick={onCancel} disabled={busy}>
             Cancel

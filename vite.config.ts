@@ -1,12 +1,19 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+  if (mode === 'production' && !/^https?:\/\//.test(env.VITE_APPS_SCRIPT_URL ?? '')) {
+    throw new Error(
+      'VITE_APPS_SCRIPT_URL is not set — a build without the Apps Script /exec URL cannot reach Google Sheets.',
+    );
+  }
+  return {
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt', // src/pwa.ts applies updates, deferring while a form is dirty
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
         name: "SCR TMR'S OUTREPORTS",
@@ -27,7 +34,6 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         navigateFallback: '/index.html',
         clientsClaim: true,
-        skipWaiting: true,
         // The Apps Script API is never HTTP-cached: responses arrive via
         // redirected one-time googleusercontent URLs. Offline reads come from
         // the app-level list cache in IndexedDB instead.
@@ -40,4 +46,5 @@ export default defineConfig({
       },
     }),
   ],
+  };
 });

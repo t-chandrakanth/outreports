@@ -17,16 +17,28 @@ export function parseSheetDate(value: string): Date | null {
   m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(v);
   if (m) return mk(Number(m[3]), Number(m[2]), Number(m[1]));
 
-  // dd-mm hh:mm (Sheets short datetime, year omitted -> assume current year)
+  // dd-mm hh:mm (Sheets short datetime, year omitted). Assume the current
+  // year unless that lands well in the future — a December entry viewed in
+  // January belongs to the previous year, not eleven months ahead.
   m = /^(\d{1,2})-(\d{1,2})\s+\d{1,2}:\d{2}/.exec(v);
-  if (m) return mk(new Date().getFullYear(), Number(m[2]), Number(m[1]));
+  if (m) {
+    const now = new Date();
+    const guess = mk(now.getFullYear(), Number(m[2]), Number(m[1]));
+    if (guess && guess.getTime() - now.getTime() > 60 * 86_400_000) {
+      return mk(now.getFullYear() - 1, Number(m[2]), Number(m[1]));
+    }
+    return guess;
+  }
 
   return null;
 }
 
 function mk(y: number, mo: number, d: number): Date | null {
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-  return new Date(y, mo - 1, d);
+  const date = new Date(y, mo - 1, d);
+  // Reject impossible days (31/02 would silently roll over to March).
+  if (date.getMonth() !== mo - 1 || date.getDate() !== d) return null;
+  return date;
 }
 
 /** True when `value` falls on the calendar day given by an <input type=date> string. */

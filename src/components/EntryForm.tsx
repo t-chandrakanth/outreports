@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
 import { emptyRecord, FIELD_GROUPS, FIELDS } from '../config';
+import { setFormDirty } from '../pwa';
 import { enqueue, updateQueued } from '../offline/outbox';
+
+/** Field headers contain spaces/() — unusable as-is in id/aria attributes. */
+const fieldId = (header: string) => 'field-' + header.replace(/\W+/g, '-');
+const errorId = (header: string) => 'err-' + header.replace(/\W+/g, '-');
 import type { OutreportRecord } from '../types';
 import { useToast } from './Toast';
 
@@ -29,6 +34,18 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
     setErrors({});
   }, [edit, sheet]);
 
+  const dirty = useMemo(() => {
+    const base = edit?.record ?? emptyRecord();
+    return FIELDS.some((f) => (record[f.header] ?? '') !== (base[f.header] ?? ''));
+  }, [record, edit]);
+
+  // A service-worker update reloads the page; hold it back while typing.
+  const dirtyKey = useRef(Symbol('entry-form')).current;
+  useEffect(() => {
+    setFormDirty(dirtyKey, dirty);
+    return () => setFormDirty(dirtyKey, false);
+  }, [dirty, dirtyKey]);
+
   const groups = useMemo(
     () => FIELD_GROUPS.map((g) => ({ name: g, fields: FIELDS.filter((f) => f.group === g) })),
     [],
@@ -48,7 +65,7 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
     }
     setErrors(next);
     const firstBad = FIELDS.find((f) => next[f.header]);
-    if (firstBad) document.getElementById(`field-${firstBad.header}`)?.focus();
+    if (firstBad) document.getElementById(fieldId(firstBad.header))?.focus();
     return Object.keys(next).length === 0;
   }
 
@@ -67,13 +84,32 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
     try {
       if (edit) {
         if (edit.queued) {
-          await updateQueued(edit.id, rec);
-          toast('success', 'Entry updated — will sync when online');
-        } else {
-          await updateOutreport(sheet, edit.id, rec);
-          toast('success', 'Outreport updated');
+          // The entry may have left the outbox while this form was open
+          // (a flush delivered it, or it was removed locally) — a blind
+          // queue update would silently discard the edit.
+          const stillQueued = await updateQueued(edit.id, rec);
+          if (stillQueued) {
+            toast('success', 'Entry updated — will sync when online');
+            onDone({ refresh: false });
+            return;
+          }
+          try {
+            await updateOutreport(sheet, edit.id, rec); // it synced meanwhile
+            toast('success', 'Outreport updated');
+            onDone({ refresh: true });
+          } catch (err) {
+            if (err instanceof ApiError && err.code === 'NOT_FOUND') {
+              toast('error', 'This entry no longer exists — it was removed');
+              onDone({ refresh: true });
+            } else {
+              throw err;
+            }
+          }
+          return;
         }
-        onDone({ refresh: !edit.queued });
+        await updateOutreport(sheet, edit.id, rec);
+        toast('success', 'Outreport updated');
+        onDone({ refresh: true });
         return;
       }
 
@@ -97,7 +133,12 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
         ) {
           // Keep the entry safe locally; the outbox will retry.
           await enqueue(sheet, id, rec);
-          toast('info', 'No connection to Google Sheets — saved on this device, will sync');
+          toast(
+            'info',
+            err instanceof ApiError && err.code === 'BAD_RESPONSE'
+              ? 'Saved on this device — the Google Apps Script backend is not set up yet'
+              : 'No connection to Google Sheets — saved on this device, will sync',
+          );
           reset();
           onDone({ refresh: false });
         } else {
@@ -124,11 +165,11 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
           <legend className="fieldset-legend">{group.name}</legend>
           {group.fields.map((f) => (
             <div className="field" key={f.header}>
-              <label className="field-label" htmlFor={`field-${f.header}`}>
+              <label className="field-label" htmlFor={fieldId(f.header)}>
                 {f.label} {f.required && <span className="req" aria-hidden="true">*</span>}
               </label>
               <input
-                id={`field-${f.header}`}
+                id={fieldId(f.header)}
                 className="field-input"
                 type={f.inputType}
                 inputMode={f.inputMode}
@@ -138,10 +179,10 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
                 value={record[f.header] ?? ''}
                 onChange={(e) => setValue(f.header, e.target.value)}
                 aria-invalid={!!errors[f.header]}
-                aria-describedby={errors[f.header] ? `err-${f.header}` : undefined}
+                aria-describedby={errors[f.header] ? errorId(f.header) : undefined}
               />
               {errors[f.header] && (
-                <div className="field-error" id={`err-${f.header}`}>{errors[f.header]}</div>
+                <div className="field-error" id={errorId(f.header)}>{errors[f.header]}</div>
               )}
             </div>
           ))}

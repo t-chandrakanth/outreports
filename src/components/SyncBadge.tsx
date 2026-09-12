@@ -7,17 +7,24 @@ export function SyncBadge() {
   const online = useOnline();
   const outbox = useOutbox();
   const toast = useToast();
-  const pending = outbox.length;
+  const syncable = outbox.filter((it) => it.status !== 'error').length;
+  const broken = outbox.length - syncable;
 
-  if (!pending && online) return null;
+  if (outbox.length === 0 && online) return null;
 
   const label = !online
-    ? pending ? `Offline · ${pending} waiting` : 'Offline'
-    : `${pending} to sync`;
+    ? outbox.length ? `Offline · ${outbox.length} waiting` : 'Offline'
+    : syncable
+      ? `${syncable} to sync`
+      : `${broken} need${broken === 1 ? 's' : ''} fixing`;
 
   async function syncNow() {
     if (!online) {
       toast('info', 'Still offline — entries will sync when connection returns');
+      return;
+    }
+    if (!syncable) {
+      toast('info', 'These entries were rejected — open Saved and edit them to retry');
       return;
     }
     const res = await flushOutbox();

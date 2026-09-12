@@ -192,7 +192,15 @@ function apiSave(sheet, id, record) {
     if (header === ID_HEADER) return id;
     return record.hasOwnProperty(header) ? String(record[header]) : '';
   });
-  sheet.appendRow(row);
+  // Write as plain text (format '@'), NOT appendRow: typed-input coercion
+  // would re-parse dates ("2026-09-12" -> Date cell with the column's legacy
+  // display format, corrupting the round-trip) and treat leading '='/'+' as
+  // formulas.
+  var rowNum = sheet.getLastRow() + 1;
+  if (sheet.getMaxRows() < rowNum) sheet.insertRowAfter(sheet.getMaxRows());
+  var range = sheet.getRange(rowNum, 1, 1, lastCol);
+  range.setNumberFormat('@');
+  range.setValues([row]);
   return { ok: true, id: id };
 }
 
@@ -209,14 +217,17 @@ function apiUpdate(sheet, id, record) {
 
   var lastCol = sheet.getLastColumn();
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  var row = headers.map(function (h, i) {
-    var header = String(h).trim();
-    if (header === ID_HEADER) return id;
-    if (record.hasOwnProperty(header)) return String(record[header]);
-    // keep existing value for any column the client did not send
-    return sheet.getRange(rowNum, i + 1).getDisplayValue();
-  });
-  sheet.getRange(rowNum, 1, 1, lastCol).setValues([row]);
+  // Only touch the columns the client actually sent: rewriting the whole row
+  // would flatten formulas/typed values in any legacy column, and coercion
+  // would corrupt them further. Cells are written as plain text.
+  for (var i = 0; i < headers.length; i++) {
+    var header = String(headers[i]).trim();
+    if (header === ID_HEADER) continue;
+    if (!record.hasOwnProperty(header)) continue;
+    var cell = sheet.getRange(rowNum, i + 1);
+    cell.setNumberFormat('@');
+    cell.setValue(String(record[header]));
+  }
   return { ok: true, id: id };
 }
 
@@ -234,35 +245,46 @@ function apiDelete(sheet, id) {
 
 function apiList(sheet, limit) {
   var idCol = ensureIdColumn(sheet);
-  var lastRow = sheet.getLastRow();
-  var lastCol = sheet.getLastColumn();
 
-  var headerRow = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
-
-  // Backfill _ID for legacy rows (created by the old UI) so they can be
-  // edited/deleted. Non-blocking: skip if another execution holds the lock.
-  if (lastRow >= 2) {
-    var idRange = sheet.getRange(2, idCol, lastRow - 1, 1);
-    var idValues = idRange.getValues();
-    var needsBackfill = idValues.some(function (r) { return String(r[0]).trim() === ''; });
+  // Backfill _ID for legacy rows (created by the old UI or typed straight
+  // into the sheet) so they can be edited/deleted. All bounds are recomputed
+  // INSIDE the lock — concurrent deletes shift rows, and a stale range would
+  // write a UUID past the end of the data.
+  var probeLastRow = sheet.getLastRow();
+  if (probeLastRow >= 2) {
+    var probe = sheet.getRange(2, idCol, probeLastRow - 1, 1).getValues();
+    var needsBackfill = probe.some(function (r) { return String(r[0]).trim() === ''; });
     if (needsBackfill) {
       var lock = LockService.getScriptLock();
-      if (lock.tryLock(5000)) {
+      if (lock.tryLock(500)) {
         try {
-          // Re-read inside the lock in case another execution just backfilled.
-          idValues = idRange.getValues();
-          for (var i = 0; i < idValues.length; i++) {
-            if (String(idValues[i][0]).trim() === '') {
-              idValues[i][0] = Utilities.getUuid();
+          var lockedLastRow = sheet.getLastRow();
+          if (lockedLastRow >= 2) {
+            var idRange = sheet.getRange(2, idCol, lockedLastRow - 1, 1);
+            var idValues = idRange.getValues();
+            for (var i = 0; i < idValues.length; i++) {
+              if (String(idValues[i][0]).trim() === '') {
+                idValues[i][0] = Utilities.getUuid();
+              }
             }
+            idRange.setNumberFormat('@');
+            idRange.setValues(idValues);
           }
-          idRange.setValues(idValues);
         } finally {
           lock.releaseLock();
         }
       }
+      // Lock contended: serve the list anyway; rows without an id are
+      // rendered read-only by the client until a later list backfills them.
     }
   }
+
+  // ONE snapshot for headers, cells and ids: separate reads can tear when a
+  // concurrent delete shifts rows, mispairing ids with the wrong records.
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  var all = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
+  var headerRow = all[0];
 
   var headers = [];
   var dataColIdx = []; // 0-based indexes of non-_ID columns
@@ -274,17 +296,13 @@ function apiList(sheet, limit) {
 
   var rows = [];
   var total = Math.max(0, lastRow - 1);
-  if (total > 0) {
-    var values = sheet.getRange(2, 1, total, lastCol).getDisplayValues();
-    var ids = sheet.getRange(2, idCol, total, 1).getValues();
-    var start = Math.max(0, total - limit);
-    // newest first: walk from the bottom of the sheet upwards
-    for (var r = total - 1; r >= start; r--) {
-      rows.push({
-        id: String(ids[r][0]),
-        cells: dataColIdx.map(function (ci) { return values[r][ci]; })
-      });
-    }
+  var start = Math.max(1, lastRow - limit); // index into `all` (row 0 = headers)
+  // newest first: walk from the bottom of the sheet upwards
+  for (var r = lastRow - 1; r >= start; r--) {
+    rows.push({
+      id: String(all[r][idCol - 1]),
+      cells: dataColIdx.map(function (ci) { return all[r][ci]; })
+    });
   }
 
   return { ok: true, headers: headers, rows: rows, total: total };

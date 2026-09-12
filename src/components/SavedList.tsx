@@ -208,9 +208,9 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
         </p>
       )}
 
-      {visible.map((entry) => (
+      {visible.map((entry, idx) => (
         <RecordCard
-          key={entry.id}
+          key={entry.id || `noid-${idx}`}
           sheet={sheet}
           entry={entry}
           onEdit={handleEdit}

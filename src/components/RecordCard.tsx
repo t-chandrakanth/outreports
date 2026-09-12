@@ -31,6 +31,10 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
         ? 'card card--pending'
         : 'card';
 
+  // A legacy row can arrive before the server assigned it an _ID (backfill
+  // lock was contended). Without an id it cannot be edited or deleted yet.
+  const noId = !entry.queueStatus && !entry.id;
+
   async function copy() {
     try {
       const how = await copyOrShare(buildWhatsAppText(sheet, record));
@@ -81,7 +85,8 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
               type="button"
               className="btn btn-quiet btn-small"
               onClick={() => onEdit(entry)}
-              disabled={entry.queueStatus === 'syncing'}
+              disabled={entry.queueStatus === 'syncing' || noId}
+              title={noId ? 'Refresh the list to enable editing' : undefined}
             >
               Edit
             </button>
@@ -92,7 +97,8 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
               type="button"
               className="btn btn-danger btn-small"
               onClick={() => onDelete(entry)}
-              disabled={entry.queueStatus === 'syncing'}
+              disabled={entry.queueStatus === 'syncing' || noId}
+              title={noId ? 'Refresh the list to enable deleting' : undefined}
             >
               Delete
             </button>

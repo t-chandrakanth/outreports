@@ -2,8 +2,14 @@
  * Offline outbox: new entries that could not be delivered are queued in
  * IndexedDB and flushed when connectivity returns.
  *
- * Semantics (see plan):
+ * Semantics:
  * - Flush is single-flight and sequential.
+ * - Before each send the item is RE-READ from the store: an item deleted
+ *   locally mid-flush is skipped (never published), and the CURRENT record is
+ *   sent, not a stale snapshot.
+ * - After a successful send the item is removed only if its record still
+ *   matches what was sent; if the user edited it while the request was in
+ *   flight, the edit is pushed with an update call before removal.
  * - NetworkError / BUSY / BAD_RESPONSE -> stop the loop; items stay pending
  *   and are retried on the next trigger (online event, app start, manual).
  * - Other server rejections (e.g. VALIDATION) -> mark that item 'error' and
@@ -12,7 +18,7 @@
  */
 
 import { get, update } from 'idb-keyval';
-import { ApiError, NetworkError, saveOutreport } from '../api/client';
+import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
 import type { OutreportRecord, QueueItem } from '../types';
 
 const KEY = 'outbox:v1';
@@ -34,6 +40,25 @@ export async function getOutbox(): Promise<QueueItem[]> {
   return (await get<QueueItem[]>(KEY)) ?? [];
 }
 
+/**
+ * Items persisted as 'syncing' by a flush that never finished (app killed
+ * mid-request) must not stay locked forever: reset them to 'pending'.
+ * Called on app start, before any flush.
+ */
+export async function normalizeOutbox(): Promise<void> {
+  let changed = false;
+  await update<QueueItem[]>(KEY, (items) =>
+    (items ?? []).map((it) => {
+      if (it.status === 'syncing') {
+        changed = true;
+        return { ...it, status: 'pending' as const };
+      }
+      return it;
+    }),
+  );
+  if (changed) await notify();
+}
+
 export async function enqueue(sheet: string, id: string, record: OutreportRecord): Promise<void> {
   await update<QueueItem[]>(KEY, (items) => [
     ...(items ?? []),
@@ -48,14 +73,22 @@ export async function enqueue(sheet: string, id: string, record: OutreportRecord
   await notify();
 }
 
-/** Edit a queued (not yet delivered) entry in place. */
-export async function updateQueued(id: string, record: OutreportRecord): Promise<void> {
+/**
+ * Edit a queued (not yet delivered) entry in place.
+ * Returns false when the entry is no longer in the queue (already delivered
+ * by a flush, or removed locally) — the caller must NOT report success then.
+ */
+export async function updateQueued(id: string, record: OutreportRecord): Promise<boolean> {
+  let matched = false;
   await update<QueueItem[]>(KEY, (items) =>
-    (items ?? []).map((it) =>
-      it.id === id ? { ...it, record, status: 'pending' as const, message: undefined } : it,
-    ),
+    (items ?? []).map((it) => {
+      if (it.id !== id) return it;
+      matched = true;
+      return { ...it, record, status: 'pending' as const, message: undefined };
+    }),
   );
   await notify();
+  return matched;
 }
 
 /** Remove a queued entry (local only — it never reached the sheet). */
@@ -64,11 +97,32 @@ export async function removeQueued(id: string): Promise<void> {
   await notify();
 }
 
+async function readItem(id: string): Promise<QueueItem | undefined> {
+  return (await getOutbox()).find((it) => it.id === id);
+}
+
 async function setStatus(id: string, status: QueueItem['status'], message?: string): Promise<void> {
   await update<QueueItem[]>(KEY, (items) =>
     (items ?? []).map((it) => (it.id === id ? { ...it, status, message } : it)),
   );
   await notify();
+}
+
+/** Remove the item only if its record is still exactly what was delivered. */
+async function removeIfUnchanged(id: string, delivered: OutreportRecord): Promise<boolean> {
+  let removed = false;
+  await update<QueueItem[]>(KEY, (items) =>
+    (items ?? []).filter((it) => {
+      if (it.id !== id) return true;
+      if (JSON.stringify(it.record) === JSON.stringify(delivered)) {
+        removed = true;
+        return false;
+      }
+      return true; // record changed mid-flight: keep it for reconciliation
+    }),
+  );
+  await notify();
+  return removed;
 }
 
 let flushing: Promise<FlushResult> | null = null;
@@ -87,26 +141,55 @@ export function flushOutbox(): Promise<FlushResult> {
   return flushing;
 }
 
+function isRetryable(err: unknown): boolean {
+  return (
+    err instanceof NetworkError ||
+    (err instanceof ApiError && (err.code === 'BUSY' || err.code === 'BAD_RESPONSE'))
+  );
+}
+
 async function doFlush(): Promise<FlushResult> {
   const result: FlushResult = { delivered: 0, failed: 0, stopped: false };
-  const items = await getOutbox();
+  const ids = (await getOutbox()).map((it) => it.id);
 
-  for (const item of items) {
-    if (item.status === 'error') continue; // needs user attention; skip
-    await setStatus(item.id, 'syncing');
+  for (const id of ids) {
+    // Re-read: the item may have been edited or deleted since the snapshot.
+    const item = await readItem(id);
+    if (!item || item.status === 'error') continue;
+
+    await setStatus(id, 'syncing');
+    const sending = item.record;
     try {
-      await saveOutreport(item.sheet, item.id, item.record);
-      await removeQueued(item.id);
+      const { duplicate } = await saveOutreport(item.sheet, id, sending);
+      if (duplicate) {
+        // The id was delivered by an earlier interrupted flush — but possibly
+        // with older content (a later edit re-queued this item). The server's
+        // duplicate check does not compare content, so push the current
+        // record to make the sheet match.
+        await updateOutreport(item.sheet, id, sending);
+      }
+      let done = await removeIfUnchanged(id, sending);
+      if (!done) {
+        // Edited while the save was in flight (a plain retry would hit the
+        // server's duplicate-id check and drop the edit): push the current
+        // record as an update, then remove.
+        const current = await readItem(id);
+        if (current) {
+          await updateOutreport(current.sheet, id, current.record);
+          done = await removeIfUnchanged(id, current.record);
+          if (!done) await setStatus(id, 'pending'); // edited again: next flush
+        }
+      }
       result.delivered += 1;
     } catch (err) {
-      if (err instanceof NetworkError || (err instanceof ApiError && (err.code === 'BUSY' || err.code === 'BAD_RESPONSE'))) {
+      if (isRetryable(err)) {
         // Retryable (or backend-misconfigured): keep pending, stop the loop.
-        await setStatus(item.id, 'pending');
+        await setStatus(id, 'pending');
         result.stopped = true;
         break;
       }
       // Terminal rejection (VALIDATION etc.): flag it and keep going.
-      await setStatus(item.id, 'error', err instanceof Error ? err.message : String(err));
+      await setStatus(id, 'error', err instanceof Error ? err.message : String(err));
       result.failed += 1;
     }
   }

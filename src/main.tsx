@@ -1,14 +1,17 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
 import App from './App';
-import { flushOutbox } from './offline/outbox';
+import { flushOutbox, normalizeOutbox } from './offline/outbox';
+import { initPWA } from './pwa';
 import './styles/global.css';
 
-registerSW({ immediate: true });
+initPWA();
 
-// Push any entries queued while offline as soon as the app opens.
-if (navigator.onLine) void flushOutbox();
+// Items left as 'syncing' by an interrupted flush must be unlocked even when
+// starting offline; then push anything queued as soon as the app opens.
+void normalizeOutbox().then(() => {
+  if (navigator.onLine) void flushOutbox();
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

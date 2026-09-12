@@ -24,6 +24,10 @@ Phone / desktop browser
 - **Delete PIN**: deletes are validated server-side against the
   `DELETE_PIN` Script Property.
 - The old Apps Script web app UI keeps working at its original URL.
+  Known limitation kept for compatibility: the legacy UI deletes by row
+  number, so if two people delete from it at the same moment the wrong row
+  can be removed (this has always been true). The PWA deletes by `_ID` and
+  is not affected — prefer the PWA for deletes.
 
 ## One-time backend setup (Apps Script)
 
