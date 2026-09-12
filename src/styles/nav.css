@@ -7,7 +7,7 @@
   /* Vertical pans stay native; horizontal movement belongs to the JS
      gestures (edge-swipe back, tab panels). */
   touch-action: pan-y;
-  background: var(--paper);
+  background: var(--mui-palette-background-default, #f7fafc);
 }
 
 .nav-layer {
@@ -15,7 +15,7 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
+  background: var(--mui-palette-background-default, #f7fafc);
   will-change: transform;
 }
 
@@ -23,7 +23,7 @@
 .nav-scrim {
   position: absolute;
   inset: 0;
-  background: rgba(6, 18, 32, 0.34);
+  background: rgba(0, 0, 0, 0.36) /* Chakra blackAlpha.500 */;
   opacity: 0;
   pointer-events: none;
 }

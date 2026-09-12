@@ -204,18 +204,22 @@ Where a string does not fit, shorten the translation rather than restyle.
 | primary.light | teal.500 | `#319795` |
 | primary.dark | teal.700 | `#285E61` |
 | secondary.main | teal.400 | `#38B2AC` |
-| success.main / dark | green.500 / green.600 | `#38A169` / `#2F855A` |
-| warning.main | orange.500 | `#DD6B20` |
-| error.main | red.500 | `#E53E3E` |
+| success.main / dark | green.600 / green.700 | `#2F855A` / `#276749` |
+| warning.main / light | orange.600 / orange.300 | `#C05621` / `#F6AD55` |
+| error.main / light | red.600 / red.300 | `#C53030` / `#FC8181` |
 | background.default | gray.50 | `#F7FAFC` |
 | background.paper | white | `#FFFFFF` |
 | text.primary | gray.800 | `#1A202C` |
 | text.secondary | gray.600 | `#4A5568` |
 | divider | gray.200 | `#E2E8F0` |
 
-Shape: `borderRadius: 6` (Chakra `md`). Shadows: cards use Chakra `sm`
-(`0 1px 2px 0 rgba(0,0,0,0.05)`), the form footer uses Chakra `md`
-(`0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)`).
+Semantic colours use Chakra's 600 shades, not 500: white text on green.500,
+red.500 and orange.500 measures 3.3, 4.2 and 3.4:1 and fails WCAG AA. The
+600 shades pass 4.5:1. Teal.600 with white measures 5.0:1.
+
+Shape: `borderRadius: 6` (Chakra `md`). Shadows: MUI's 25 elevation levels
+map onto Chakra's scale (1 sm, 2 base, 3-4 md, 5-8 lg, 9-16 xl, 17-24 2xl),
+so existing `elevation` props pick up Chakra shadows. Cards use `sm`.
 Record-card accent for queued entries uses `warning.main`, for errors
 `error.main`, unchanged in role.
 
@@ -260,12 +264,11 @@ Record-card accent for queued entries uses `warning.main`, for errors
   Everything else renders Inter for Latin text. Telugu and Devanagari glyphs
   are absent from Inter and fall through to the device's script fonts
   (Kohinoor/Telugu Sangam on iOS, Noto on Android).
-- `SYSTEM_FONT` in `theme.ts` is renamed `APP_FONT` and remains the single
-  definition used by MUI typography and by `global.css` via
-  `var(--mui-font-family)` (MUI emits it under `cssVariables`).
-- Line height for Telugu and Devanagari needs slightly more room: the body
-  `line-height` is raised to 1.5 (from MUI's 1.43 for body1). Checked
-  visually in step 2's layout pass.
+- `SYSTEM_FONT` in `theme.ts` is renamed `APP_FONT` and is the single
+  definition. MUI does not emit a font-family CSS variable; `CssBaseline`
+  applies the theme font to `body`, and everything in `global.css` inherits.
+- MUI 7's body1 line height is already 1.5, which leaves room for Telugu and
+  Devanagari glyphs. Checked visually in the language layout pass.
 
 ---
 

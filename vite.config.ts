@@ -29,8 +29,8 @@ export default defineConfig(({ mode }) => {
         name: "SCR TMR'S OUTREPORTS",
         short_name: 'OUTREPORTS',
         description: 'South Central Railway train outreport entry',
-        theme_color: '#002f5f',
-        background_color: '#f2f4f7',
+        theme_color: '#2C7A7B',
+        background_color: '#F7FAFC',
         display: 'standalone',
         start_url: '/',
         scope: '/',
@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         navigateFallback: '/index.html',
         clientsClaim: true,
         // The Apps Script API is never HTTP-cached: responses arrive via

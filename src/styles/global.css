@@ -1,24 +1,37 @@
-/* SCR OUTREPORTS — global tokens & the few pieces MUI does not cover.
-   Component styling lives in the MUI theme (src/theme.ts) and sx props. */
+/* SCR OUTREPORTS — fonts & the few pieces MUI does not cover.
+   Colours come from the MUI theme (src/theme.ts) via --mui-* CSS variables;
+   the hex fallbacks only apply before React mounts. */
 
-:root {
-  --scr-navy: #002f5f;
-  --scr-navy-deep: #00234a;
-  --scr-blue: #0b5fa5;
-  --signal-green: #0e7a3d;
-  --signal-red: #b3261e;
-  --paper: #f2f4f7;
-  --card: #ffffff;
-  --ink: #16202b;
-  --ink-soft: #4a5867;
-  --line: #d5dce4;
-  --line-strong: #9fb0c0;
-  --radius: 8px;
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/inter-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/inter-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/inter-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 html,
 body {
-  background: var(--paper);
+  background: var(--mui-palette-background-default, #f7fafc);
   overscroll-behavior-y: none; /* pull-to-refresh would tear the stack */
 }
 
@@ -46,7 +59,7 @@ body {
 }
 
 .detail-grid dt {
-  color: var(--ink-soft);
+  color: var(--mui-palette-text-secondary);
   font-weight: 600;
 }
 
@@ -72,19 +85,19 @@ body {
 }
 
 .toast {
-  border-radius: var(--radius);
+  border-radius: var(--mui-shape-borderRadius);
   padding: 12px 16px;
   font-size: 14.5px;
   font-weight: 600;
   color: #fff;
-  background: var(--ink);
-  box-shadow: 0 4px 14px rgba(10, 25, 41, 0.3);
+  background: var(--mui-palette-text-primary);
+  box-shadow: var(--mui-shadows-4);
   text-align: center;
 }
 
-.toast--success { background: var(--signal-green); }
-.toast--error { background: var(--signal-red); }
-.toast--info { background: var(--scr-navy); }
+.toast--success { background: var(--mui-palette-success-main); }
+.toast--error { background: var(--mui-palette-error-main); }
+.toast--info { background: var(--mui-palette-primary-main); }
 
 /* ---------- Install guide steps ---------- */
 
@@ -101,7 +114,7 @@ body {
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--mui-palette-divider);
   font-size: 14.5px;
 }
 
@@ -113,7 +126,7 @@ body {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--scr-navy);
+  background: var(--mui-palette-primary-main);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -126,7 +139,7 @@ body {
   flex-shrink: 0;
   width: 26px;
   height: 26px;
-  color: var(--scr-blue);
+  color: var(--mui-palette-primary-main);
 }
 
 .step-badge {
@@ -134,8 +147,8 @@ body {
   min-width: 26px;
   padding: 2px 8px;
   border-radius: 6px;
-  background: #e8eef5;
-  color: var(--scr-blue);
+  background: #e6fffa; /* Chakra teal.50 */
+  color: var(--mui-palette-primary-main);
   font-size: 12.5px;
   font-weight: 700;
   text-align: center;

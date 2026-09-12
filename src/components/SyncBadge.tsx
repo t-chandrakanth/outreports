@@ -37,7 +37,7 @@ export function SyncBadge() {
     else if (res.failed) toast('error', 'Some entries need fixing — see Saved tab');
   }
 
-  const dotColor = !online ? '#ff8a80' : broken && !syncable ? '#ff8a80' : '#ffc46b';
+  const dotColor = !online || (broken && !syncable) ? 'error.light' : 'warning.light';
 
   return (
     <Chip
