@@ -1,6 +1,16 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import TextField from '@mui/material/TextField';
+import { useBackClose } from '../nav/NavContext';
+import { rememberedPin } from '../utils/pin';
 
 interface Props {
+  open: boolean;
   title: string;
   message: string;
   confirmLabel: string;
@@ -10,96 +20,56 @@ interface Props {
   onCancel: () => void;
 }
 
-const PIN_KEY = 'outreports:pin';
+export function PinDialog({ open, title, message, confirmLabel, busy, error, onConfirm, onCancel }: Props) {
+  const [pin, setPin] = useState('');
 
-export function rememberedPin(): string {
-  try {
-    return sessionStorage.getItem(PIN_KEY) ?? '';
-  } catch {
-    return '';
-  }
-}
-
-export function rememberPin(pin: string): void {
-  try {
-    sessionStorage.setItem(PIN_KEY, pin);
-  } catch {
-    /* private mode */
-  }
-}
-
-export function forgetPin(): void {
-  try {
-    sessionStorage.removeItem(PIN_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
-export function PinDialog({ title, message, confirmLabel, busy, error, onConfirm, onCancel }: Props) {
-  const [pin, setPin] = useState(rememberedPin());
-  const dialogRef = useRef<HTMLFormElement>(null);
-
-  // Modal behavior: restore focus to the opener on close, close on Escape,
-  // and keep Tab cycling inside the dialog.
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    return () => opener?.focus?.();
-  }, []);
+    if (open) setPin(rememberedPin());
+  }, [open]);
 
-  function onKeyDown(e: KeyboardEvent<HTMLFormElement>) {
-    if (e.key === 'Escape' && !busy) {
-      e.preventDefault();
-      onCancel();
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
-      'input, button:not([disabled])',
-    );
-    if (!focusables || focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
+  // Hardware back closes the dialog instead of leaving the screen.
+  useBackClose(open, onCancel);
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    if (pin.trim()) onConfirm(pin.trim());
+    if (pin.trim() && !busy) onConfirm(pin.trim());
   }
 
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-label={title}>
-      <form className="dialog" onSubmit={submit} onKeyDown={onKeyDown} ref={dialogRef}>
-        <h2>{title}</h2>
-        <p>{message}</p>
-        <input
-          className="field-input"
-          type="password"
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="PIN"
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          aria-invalid={!!error}
-          autoFocus
-        />
-        {error && <div className="field-error" role="alert">{error}</div>}
-        <div className="dialog-actions">
-          <button type="button" className="btn btn-quiet" onClick={onCancel} disabled={busy}>
+    <Dialog
+      open={open}
+      onClose={busy ? undefined : onCancel}
+      maxWidth="xs"
+      fullWidth
+      aria-labelledby="pin-dialog-title"
+    >
+      <form onSubmit={submit} noValidate>
+        <DialogTitle id="pin-dialog-title">{title}</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>{message}</DialogContentText>
+          <TextField
+            autoFocus
+            type="password"
+            label="PIN"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            error={!!error}
+            helperText={error || undefined}
+            slotProps={{
+              htmlInput: { inputMode: 'numeric', autoComplete: 'off' },
+              formHelperText: error ? { role: 'alert' } : undefined,
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={onCancel} disabled={busy} color="inherit">
             Cancel
-          </button>
-          <button type="submit" className="btn btn-danger" disabled={busy || !pin.trim()}>
+          </Button>
+          <Button type="submit" variant="contained" color="error" disabled={busy || !pin.trim()}>
             {busy ? 'Deleting…' : confirmLabel}
-          </button>
-        </div>
+          </Button>
+        </DialogActions>
       </form>
-    </div>
+    </Dialog>
   );
 }

@@ -1,3 +1,5 @@
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import { useOnline } from '../hooks/useOnline';
 import { useOutbox } from '../hooks/useOutbox';
 import { flushOutbox } from '../offline/outbox';
@@ -13,7 +15,9 @@ export function SyncBadge() {
   if (outbox.length === 0 && online) return null;
 
   const label = !online
-    ? outbox.length ? `Offline · ${outbox.length} waiting` : 'Offline'
+    ? outbox.length
+      ? `Offline · ${outbox.length} waiting`
+      : 'Offline'
     : syncable
       ? `${syncable} to sync`
       : `${broken} need${broken === 1 ? 's' : ''} fixing`;
@@ -33,10 +37,26 @@ export function SyncBadge() {
     else if (res.failed) toast('error', 'Some entries need fixing — see Saved tab');
   }
 
+  const dotColor = !online ? '#ff8a80' : broken && !syncable ? '#ff8a80' : '#ffc46b';
+
   return (
-    <button className="sync-badge" onClick={syncNow} title="Sync now">
-      <span className={`sync-dot${online ? '' : ' sync-dot--offline'}`} />
-      {label}
-    </button>
+    <Chip
+      size="small"
+      onClick={() => void syncNow()}
+      label={label}
+      title="Sync now"
+      icon={
+        <Box
+          component="span"
+          sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: dotColor, ml: '6px !important' }}
+        />
+      }
+      sx={{
+        bgcolor: 'rgba(255,255,255,0.16)',
+        color: '#fff',
+        fontWeight: 600,
+        '&:hover': { bgcolor: 'rgba(255,255,255,0.26)' },
+      }}
+    />
   );
 }

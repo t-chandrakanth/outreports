@@ -1,4 +1,18 @@
 import { useState } from 'react';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardActions from '@mui/material/CardActions';
+import Chip from '@mui/material/Chip';
+import Collapse from '@mui/material/Collapse';
+import Divider from '@mui/material/Divider';
+import Typography from '@mui/material/Typography';
+import CardActionArea from '@mui/material/CardActionArea';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { FIELDS, SUMMARY } from '../config';
 import type { OutreportRecord, QueueStatus } from '../types';
 import { buildWhatsAppText, copyOrShare } from '../utils/whatsapp';
@@ -24,12 +38,8 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
   const toast = useToast();
   const { record } = entry;
 
-  const cls =
-    entry.queueStatus === 'error'
-      ? 'card card--error'
-      : entry.queueStatus
-        ? 'card card--pending'
-        : 'card';
+  const accent =
+    entry.queueStatus === 'error' ? 'error.main' : entry.queueStatus ? 'warning.main' : 'transparent';
 
   // A legacy row can arrive before the server assigned it an _ID (backfill
   // lock was contended). Without an id it cannot be edited or deleted yet.
@@ -45,66 +55,89 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
   }
 
   return (
-    <article className={cls}>
-      <button
-        type="button"
-        className="card-head"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-      >
-        <span className="card-train">{record[SUMMARY.trainNo] || '—'}</span>
-        <span className="card-loco">{record[SUMMARY.locoNo]}</span>
-        {entry.queueStatus === 'error' && <span className="chip chip--error">needs fix</span>}
-        {(entry.queueStatus === 'pending' || entry.queueStatus === 'syncing') && (
-          <span className="chip chip--pending">
-            {entry.queueStatus === 'syncing' ? 'syncing…' : 'waiting to sync'}
-          </span>
-        )}
-        <span className="card-date">{record[SUMMARY.date]}</span>
-      </button>
-
-      {open && (
-        <div className="card-body">
-          {entry.queueStatus === 'error' && entry.queueMessage && (
-            <div className="card-error-msg">{entry.queueMessage} — edit this entry and save again.</div>
+    <Card component="article" sx={{ mb: 1.5, borderRadius: 2, borderLeft: '4px solid', borderLeftColor: accent }}>
+      <CardActionArea onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 700 }} noWrap>
+              {record[SUMMARY.trainNo] || '—'}
+              {record[SUMMARY.locoNo] && (
+                <Typography component="span" sx={{ color: 'text.secondary', fontWeight: 400, ml: 1 }}>
+                  {record[SUMMARY.locoNo]}
+                </Typography>
+              )}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+              {record[SUMMARY.date]}
+            </Typography>
+          </Box>
+          {entry.queueStatus === 'error' && <Chip label="needs fix" color="error" size="small" />}
+          {(entry.queueStatus === 'pending' || entry.queueStatus === 'syncing') && (
+            <Chip
+              label={entry.queueStatus === 'syncing' ? 'syncing…' : 'waiting to sync'}
+              color="warning"
+              size="small"
+              variant="outlined"
+            />
           )}
-          <dl className="detail-grid">
+          <ExpandMoreIcon
+            sx={{
+              color: 'text.secondary',
+              transition: 'transform 180ms',
+              transform: open ? 'rotate(180deg)' : 'none',
+              '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+            }}
+          />
+        </Box>
+      </CardActionArea>
+
+      <Collapse in={open} unmountOnExit>
+        <Divider />
+        <Box sx={{ px: 2, py: 1.5 }}>
+          {entry.queueStatus === 'error' && entry.queueMessage && (
+            <Alert severity="error" sx={{ mb: 1.5 }}>
+              {entry.queueMessage} — edit this entry and save again.
+            </Alert>
+          )}
+          <Box component="dl" className="detail-grid">
             {FIELDS.map((f) => {
               const value = (record[f.header] ?? '').trim();
               if (!value) return null;
               return (
-                <div key={f.header} style={{ display: 'contents' }}>
+                <Box key={f.header} sx={{ display: 'contents' }}>
                   <dt>{f.label}</dt>
                   <dd>{value}</dd>
-                </div>
+                </Box>
               );
             })}
-          </dl>
-          <div className="card-actions">
-            <button
-              type="button"
-              className="btn btn-quiet btn-small"
-              onClick={() => onEdit(entry)}
-              disabled={entry.queueStatus === 'syncing' || noId}
-              title={noId ? 'Refresh the list to enable editing' : undefined}
-            >
-              Edit
-            </button>
-            <button type="button" className="btn btn-quiet btn-small" onClick={copy}>
-              Copy for WhatsApp
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger btn-small"
-              onClick={() => onDelete(entry)}
-              disabled={entry.queueStatus === 'syncing' || noId}
-              title={noId ? 'Refresh the list to enable deleting' : undefined}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      )}
-    </article>
+          </Box>
+        </Box>
+        <CardActions sx={{ px: 1.5, pb: 1.5, pt: 0, gap: 0.5, flexWrap: 'wrap' }}>
+          <Button
+            size="small"
+            startIcon={<EditOutlinedIcon />}
+            onClick={() => onEdit(entry)}
+            disabled={entry.queueStatus === 'syncing' || noId}
+            title={noId ? 'Refresh the list to enable editing' : undefined}
+          >
+            Edit
+          </Button>
+          <Button size="small" startIcon={<ContentCopyIcon />} onClick={copy}>
+            WhatsApp
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            size="small"
+            color="error"
+            startIcon={<DeleteOutlineIcon />}
+            onClick={() => onDelete(entry)}
+            disabled={entry.queueStatus === 'syncing' || noId}
+            title={noId ? 'Refresh the list to enable deleting' : undefined}
+          >
+            Delete
+          </Button>
+        </CardActions>
+      </Collapse>
+    </Card>
   );
 }

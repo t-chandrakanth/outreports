@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import SwipeableDrawer from '@mui/material/SwipeableDrawer';
+import Typography from '@mui/material/Typography';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { useBackClose } from '../nav/NavContext';
 import { useToast } from './Toast';
 
 const DISMISS_KEY = 'outreports:install-dismissed';
@@ -51,12 +56,13 @@ export function InstallGuide({ open, onClose }: Props) {
   const { canPrompt, promptInstall, platform } = useInstallPrompt();
   const toast = useToast();
 
-  if (!open) return null;
-
   function dismiss() {
     markDismissed();
     onClose();
   }
+
+  // Hardware back closes the sheet instead of navigating.
+  useBackClose(open, dismiss);
 
   async function install() {
     const outcome = await promptInstall();
@@ -68,14 +74,38 @@ export function InstallGuide({ open, onClose }: Props) {
   }
 
   return (
-    <div className="overlay overlay--sheet" role="dialog" aria-modal="true" aria-label="Install this app">
-      <div className="sheet">
-        <div className="sheet-handle" aria-hidden="true" />
-        <h2>Keep OUTREPORTS on your phone</h2>
-        <p>
-          Install it like an app — opens full screen from your home screen and
-          keeps working when the network drops.
-        </p>
+    <SwipeableDrawer
+      anchor="bottom"
+      open={open}
+      onClose={dismiss}
+      onOpen={() => {}}
+      disableSwipeToOpen
+      aria-label="Install this app"
+      slotProps={{
+        paper: {
+          sx: {
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            maxWidth: 640,
+            mx: 'auto',
+            px: 2.5,
+            pt: 1,
+            pb: 'max(16px, env(safe-area-inset-bottom))',
+          },
+        },
+      }}
+    >
+      <Box
+        aria-hidden="true"
+        sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: 'divider', mx: 'auto', my: 1 }}
+      />
+      <Typography variant="h6" component="h2" sx={{ mt: 1 }}>
+        Keep OUTREPORTS on your phone
+      </Typography>
+      <Typography sx={{ color: 'text.secondary', mt: 0.5, mb: 1.5 }}>
+        Install it like an app — opens full screen from your home screen and
+        keeps working when the network drops.
+      </Typography>
 
         {platform === 'ios' && (
           <ol className="install-steps">
@@ -111,22 +141,21 @@ export function InstallGuide({ open, onClose }: Props) {
           </ol>
         )}
 
-        <div className="dialog-actions">
-          <button type="button" className="btn btn-quiet" onClick={dismiss}>
-            Not now
-          </button>
-          {platform !== 'ios' && canPrompt ? (
-            <button type="button" className="btn btn-save" onClick={install}>
-              Install app
-            </button>
-          ) : (
-            <button type="button" className="btn btn-save" onClick={dismiss}>
-              Got it
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
+        <Button color="inherit" variant="outlined" size="large" onClick={dismiss} sx={{ flex: '0 0 auto' }}>
+          Not now
+        </Button>
+        {platform !== 'ios' && canPrompt ? (
+          <Button variant="contained" color="success" size="large" onClick={() => void install()} sx={{ flex: 1 }}>
+            Install app
+          </Button>
+        ) : (
+          <Button variant="contained" color="success" size="large" onClick={dismiss} sx={{ flex: 1 }}>
+            Got it
+          </Button>
+        )}
+      </Box>
+    </SwipeableDrawer>
   );
 }
 

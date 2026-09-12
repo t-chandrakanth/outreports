@@ -52,3 +52,9 @@ export function isSameDay(value: string, isoDay: string): boolean {
 export function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+
+/** Local date-time as `dd/mm/yyyy HH:mm` — the form's auto-stamped DATE value. */
+export function formatDateTime(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}

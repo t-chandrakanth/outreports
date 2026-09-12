@@ -1,0 +1,58 @@
+/* Navigation stack: full-viewport layers, one per screen. */
+
+.nav-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  /* Vertical pans stay native; horizontal movement belongs to the JS
+     gestures (edge-swipe back, tab panels). */
+  touch-action: pan-y;
+  background: var(--paper);
+}
+
+.nav-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  will-change: transform;
+}
+
+/* Darkens the screen resting underneath the top one. */
+.nav-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 18, 32, 0.34);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* While a swipe gesture is engaged: no accidental text selection. */
+body.nav-gesture,
+body.nav-gesture * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Swipeable tab panels (New entry | Saved). */
+.panels {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.panels-row {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.panel {
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

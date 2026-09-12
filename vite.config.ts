@@ -10,6 +10,16 @@ export default defineConfig(({ mode }) => {
     );
   }
   return {
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

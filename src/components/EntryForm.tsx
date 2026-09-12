@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
 import { emptyRecord, FIELD_GROUPS, FIELDS } from '../config';
 import { setFormDirty } from '../pwa';
 import { enqueue, updateQueued } from '../offline/outbox';
+import type { OutreportRecord } from '../types';
+import { useToast } from './Toast';
 
 /** Field headers contain spaces/() — unusable as-is in id/aria attributes. */
 const fieldId = (header: string) => 'field-' + header.replace(/\W+/g, '-');
-const errorId = (header: string) => 'err-' + header.replace(/\W+/g, '-');
-import type { OutreportRecord } from '../types';
-import { useToast } from './Toast';
 
 export interface EditTarget {
   id: string;
@@ -21,12 +26,17 @@ interface Props {
   sheet: string;
   edit: EditTarget | null;
   onDone: (opts: { refresh: boolean }) => void;
+  /** edit mode: dedicated cancel action (back without saving) */
+  onCancel?: () => void;
+  /** reports unsaved-changes state (drives the back guard) */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function EntryForm({ sheet, edit, onDone }: Props) {
+export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Props) {
   const [record, setRecord] = useState<OutreportRecord>(() => edit?.record ?? emptyRecord());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -36,7 +46,9 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
 
   const dirty = useMemo(() => {
     const base = edit?.record ?? emptyRecord();
-    return FIELDS.some((f) => (record[f.header] ?? '') !== (base[f.header] ?? ''));
+    // Read-only fields are auto-stamped (minute resolution) and would drift
+    // against a freshly built baseline; they never count as user edits.
+    return FIELDS.some((f) => !f.readOnly && (record[f.header] ?? '') !== (base[f.header] ?? ''));
   }, [record, edit]);
 
   // A service-worker update reloads the page; hold it back while typing.
@@ -45,6 +57,10 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
     setFormDirty(dirtyKey, dirty);
     return () => setFormDirty(dirtyKey, false);
   }, [dirty, dirtyKey]);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const groups = useMemo(
     () => FIELD_GROUPS.map((g) => ({ name: g, fields: FIELDS.filter((f) => f.group === g) })),
@@ -155,63 +171,115 @@ export function EntryForm({ sheet, edit, onDone }: Props) {
   function reset() {
     setRecord(emptyRecord());
     setErrors({});
-    window.scrollTo({ top: 0 });
+    scrollRef.current?.scrollTo({ top: 0 });
   }
 
   return (
-    <form onSubmit={submit} noValidate>
-      {groups.map((group) => (
-        <fieldset className="fieldset" key={group.name}>
-          <legend className="fieldset-legend">{group.name}</legend>
-          {group.fields.map((f) => (
-            <div className="field" key={f.header}>
-              <label className="field-label" htmlFor={fieldId(f.header)}>
-                {f.label} {f.required && <span className="req" aria-hidden="true">*</span>}
-              </label>
-              <input
-                id={fieldId(f.header)}
-                className="field-input"
-                type={f.inputType}
-                inputMode={f.inputMode}
-                maxLength={f.maxLength}
-                placeholder={f.placeholder}
-                autoComplete="off"
-                value={record[f.header] ?? ''}
-                onChange={(e) => setValue(f.header, e.target.value)}
-                aria-invalid={!!errors[f.header]}
-                aria-describedby={errors[f.header] ? errorId(f.header) : undefined}
-              />
-              {errors[f.header] && (
-                <div className="field-error" id={errorId(f.header)}>{errors[f.header]}</div>
-              )}
-            </div>
+    <Box
+      component="form"
+      onSubmit={submit}
+      noValidate
+      sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+    >
+      <Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain' }}>
+        <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, py: 2.5 }}>
+          {groups.map((group) => (
+            <Box component="fieldset" key={group.name} sx={{ border: 0, m: 0, mb: 3.5, p: 0, minWidth: 0 }}>
+              <Typography
+                component="legend"
+                variant="subtitle2"
+                sx={{
+                  color: 'primary.main',
+                  fontWeight: 700,
+                  mb: 2,
+                  pb: 0.5,
+                  px: 0,
+                  width: '100%',
+                  borderBottom: '2px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                {group.name}
+              </Typography>
+              <Stack spacing={2.25}>
+                {group.fields.map((f) => (
+                  <TextField
+                    key={f.header}
+                    id={fieldId(f.header)}
+                    label={f.label}
+                    required={f.required}
+                    type={f.inputType}
+                    placeholder={f.placeholder}
+                    value={record[f.header] ?? ''}
+                    onChange={(e) => setValue(f.header, e.target.value)}
+                    error={!!errors[f.header]}
+                    helperText={errors[f.header] || undefined}
+                    slotProps={{
+                      htmlInput: {
+                        inputMode: f.inputMode,
+                        maxLength: f.maxLength,
+                        autoComplete: 'off',
+                      },
+                      input: f.readOnly ? { readOnly: true } : undefined,
+                      formHelperText: errors[f.header] ? { role: 'alert' } : undefined,
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Box>
           ))}
-        </fieldset>
-      ))}
-
-      <div className="savebar">
-        <div className="savebar-inner">
+        </Box>
+      </Box>
+      <Paper
+        square
+        elevation={8}
+        sx={{ flex: 'none', borderTop: '1px solid', borderColor: 'divider' }}
+      >
+        <Box
+          sx={{
+            maxWidth: 640,
+            mx: 'auto',
+            display: 'flex',
+            gap: 1.5,
+            p: 1.5,
+            pb: 'max(12px, env(safe-area-inset-bottom))',
+          }}
+        >
           {edit ? (
             <>
-              <button type="button" className="btn btn-quiet" onClick={() => onDone({ refresh: false })} disabled={saving}>
+              <Button
+                size="large"
+                variant="outlined"
+                color="inherit"
+                onClick={onCancel ?? (() => onDone({ refresh: false }))}
+                disabled={saving}
+                sx={{ flex: '0 0 auto' }}
+              >
                 Cancel
-              </button>
-              <button type="submit" className="btn btn-save" disabled={saving}>
+              </Button>
+              <Button type="submit" size="large" variant="contained" color="success" disabled={saving} sx={{ flex: 1 }}>
                 {saving ? 'Updating…' : 'Update outreport'}
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button type="button" className="btn btn-quiet" onClick={reset} disabled={saving}>
+              <Button
+                size="large"
+                variant="outlined"
+                color="inherit"
+                onClick={reset}
+                disabled={saving}
+                sx={{ flex: '0 0 auto' }}
+              >
                 Clear
-              </button>
-              <button type="submit" className="btn btn-save" disabled={saving}>
+              </Button>
+              <Button type="submit" size="large" variant="contained" color="success" disabled={saving} sx={{ flex: 1 }}>
                 {saving ? 'Saving…' : 'Save outreport'}
-              </button>
+              </Button>
             </>
           )}
-        </div>
-      </div>
-    </form>
+        </Box>
+      </Paper>
+    </Box>
   );
 }

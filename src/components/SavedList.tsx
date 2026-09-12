@@ -1,12 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import InputAdornment from '@mui/material/InputAdornment';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import SearchIcon from '@mui/icons-material/Search';
 import { ApiError, deleteOutreport, listOutreports } from '../api/client';
 import { useOnline } from '../hooks/useOnline';
 import { useOutbox } from '../hooks/useOutbox';
+import { useBackClose } from '../nav/NavContext';
 import { readListCache, writeListCache } from '../offline/listCache';
 import { removeQueued } from '../offline/outbox';
 import type { CachedList, ListRow, OutreportRecord } from '../types';
 import { isSameDay, formatTime } from '../utils/date';
-import { forgetPin, PinDialog, rememberPin } from './PinDialog';
+import { forgetPin, rememberPin } from '../utils/pin';
+import { PinDialog } from './PinDialog';
 import { RecordCard, type CardEntry } from './RecordCard';
 import { useToast } from './Toast';
 
@@ -35,9 +49,13 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
   const [deleting, setDeleting] = useState<CardEntry | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [removingQueued, setRemovingQueued] = useState<CardEntry | null>(null);
   const online = useOnline();
   const outbox = useOutbox();
   const toast = useToast();
+
+  // Hardware back closes the local-remove confirm instead of leaving.
+  useBackClose(removingQueued !== null, () => setRemovingQueued(null));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -151,9 +169,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
   function requestDelete(entry: CardEntry) {
     if (entry.queueStatus) {
       // Local-only entry: never reached the shared sheet, no PIN needed.
-      if (window.confirm('Remove this unsent entry from this device?')) {
-        void removeQueued(entry.id).then(() => toast('success', 'Entry removed'));
-      }
+      setRemovingQueued(entry);
       return;
     }
     if (!online) {
@@ -173,68 +189,114 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
   }
 
   return (
-    <>
-      <div className="list-tools">
-        <input
-          className="field-input list-tools-search"
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 'none', width: '100%', maxWidth: 640, mx: 'auto', px: 2, pt: 2, pb: 1, display: 'flex', gap: 1 }}>
+        <TextField
+          size="small"
           type="search"
           placeholder="Search train, loco, BPC…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search saved outreports"
+          sx={{ flex: 1 }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+              'aria-label': 'Search saved outreports',
+            },
+          }}
         />
-        <input
-          className="field-input list-tools-date"
+        <TextField
+          size="small"
           type="date"
           value={day}
           onChange={(e) => setDay(e.target.value)}
-          aria-label="Filter by date"
+          sx={{ width: 155, flex: 'none' }}
+          slotProps={{ htmlInput: { 'aria-label': 'Filter by date' } }}
         />
-      </div>
+      </Box>
 
-      {stale && data && (
-        <div className="stale-banner">
-          Offline — showing list as of {formatTime(data.fetchedAt)}
-        </div>
-      )}
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain' }}>
+        <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: 'max(16px, env(safe-area-inset-bottom))' }}>
+          {stale && data && (
+            <Alert severity="warning" sx={{ mb: 1.5 }}>
+              Offline — showing list as of {formatTime(data.fetchedAt)}
+            </Alert>
+          )}
 
-      {loading && !data && <div className="empty">Loading saved outreports…</div>}
-      {loadError && !data && <div className="empty">{loadError}</div>}
+          {loading && !data && (
+            <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+              Loading saved outreports…
+            </Typography>
+          )}
+          {loadError && !data && (
+            <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>{loadError}</Typography>
+          )}
 
-      {data && (
-        <p className="list-meta">
-          {visible.length} outreport{visible.length === 1 ? '' : 's'}
-          {data.total > data.rows.length ? ` · showing latest ${data.rows.length} of ${data.total}` : ''}
-        </p>
-      )}
+          {data && (
+            <Typography variant="caption" component="p" sx={{ color: 'text.secondary', mb: 1 }}>
+              {visible.length} outreport{visible.length === 1 ? '' : 's'}
+              {data.total > data.rows.length ? ` · showing latest ${data.rows.length} of ${data.total}` : ''}
+            </Typography>
+          )}
 
-      {visible.map((entry, idx) => (
-        <RecordCard
-          key={entry.id || `noid-${idx}`}
-          sheet={sheet}
-          entry={entry}
-          onEdit={handleEdit}
-          onDelete={requestDelete}
-        />
-      ))}
+          {visible.map((entry, idx) => (
+            <RecordCard
+              key={entry.id || `noid-${idx}`}
+              sheet={sheet}
+              entry={entry}
+              onEdit={handleEdit}
+              onDelete={requestDelete}
+            />
+          ))}
 
-      {!loading && data && visible.length === 0 && (
-        <div className="empty">
-          {search || day ? 'No outreports match the filter.' : 'No outreports saved yet — add one in New entry.'}
-        </div>
-      )}
+          {!loading && data && visible.length === 0 && (
+            <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+              {search || day ? 'No outreports match the filter.' : 'No outreports saved yet — add one in New entry.'}
+            </Typography>
+          )}
+        </Box>
+      </Box>
 
-      {deleting && (
-        <PinDialog
-          title="Delete outreport"
-          message={`Deleting ${deleting.record['TR.NO'] || 'this entry'} removes it from the shared sheet for everyone. Enter the PIN to confirm.`}
-          confirmLabel="Delete"
-          busy={deleteBusy}
-          error={deleteError}
-          onConfirm={confirmDelete}
-          onCancel={() => setDeleting(null)}
-        />
-      )}
-    </>
+      <PinDialog
+        open={deleting !== null}
+        title="Delete outreport"
+        message={`Deleting ${deleting?.record['TR.NO'] || 'this entry'} removes it from the shared sheet for everyone. Enter the PIN to confirm.`}
+        confirmLabel="Delete"
+        busy={deleteBusy}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
+
+      <Dialog open={removingQueued !== null} onClose={() => setRemovingQueued(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Remove unsent entry?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {removingQueued?.record['TR.NO'] || 'This entry'} has not been sent to the shared sheet yet.
+            Removing it deletes it from this device only.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button color="inherit" onClick={() => setRemovingQueued(null)}>
+            Keep it
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => {
+              const entry = removingQueued;
+              setRemovingQueued(null);
+              if (entry) void removeQueued(entry.id).then(() => toast('success', 'Entry removed'));
+            }}
+          >
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }
