@@ -5,9 +5,12 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
 import { trackEvent } from '../analytics';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
 import { emptyRecord, FIELD_GROUPS, FIELDS } from '../config';
+import { apiErrorMessage } from '../i18n/errors';
+import { fieldErrorText, fieldLabel, fieldPlaceholder, validateField, type FieldErrorKind } from '../i18n/fields';
 import { setFormDirty } from '../pwa';
 import { enqueue, updateQueued } from '../offline/outbox';
 import type { OutreportRecord } from '../types';
@@ -35,10 +38,12 @@ interface Props {
 
 export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Props) {
   const [record, setRecord] = useState<OutreportRecord>(() => edit?.record ?? emptyRecord());
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Error kinds, not text: messages are resolved at render time so they follow a language switch.
+  const [errors, setErrors] = useState<Partial<Record<string, FieldErrorKind>>>({});
   const [saving, setSaving] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setRecord(edit?.record ?? emptyRecord());
@@ -70,15 +75,14 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
 
   function setValue(header: string, value: string) {
     setRecord((r) => ({ ...r, [header]: value }));
-    if (errors[header]) setErrors((e) => ({ ...e, [header]: '' }));
+    if (errors[header]) setErrors((e) => ({ ...e, [header]: undefined }));
   }
 
   function validate(): boolean {
-    const next: Record<string, string> = {};
+    const next: Record<string, FieldErrorKind> = {};
     for (const f of FIELDS) {
-      const value = (record[f.header] ?? '').trim();
-      if (f.required && !value) next[f.header] = `${f.label} is required`;
-      else if (value && f.pattern && !f.pattern.test(value)) next[f.header] = f.patternMessage ?? 'Invalid value';
+      const kind = validateField(f, (record[f.header] ?? '').trim());
+      if (kind) next[f.header] = kind;
     }
     setErrors(next);
     const firstBad = FIELDS.find((f) => next[f.header]);
@@ -106,19 +110,19 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
           // queue update would silently discard the edit.
           const stillQueued = await updateQueued(edit.id, rec);
           if (stillQueued) {
-            toast('success', 'Entry updated — will sync when online');
+            toast('success', t('form.queuedUpdated'));
             trackEvent('outreport_updated', { sheet, queued: true });
             onDone({ refresh: false });
             return;
           }
           try {
             await updateOutreport(sheet, edit.id, rec); // it synced meanwhile
-            toast('success', 'Outreport updated');
+            toast('success', t('form.updated'));
             trackEvent('outreport_updated', { sheet, queued: false });
             onDone({ refresh: true });
           } catch (err) {
             if (err instanceof ApiError && err.code === 'NOT_FOUND') {
-              toast('error', 'This entry no longer exists — it was removed');
+              toast('error', t('form.noLongerExists'));
               onDone({ refresh: true });
             } else {
               throw err;
@@ -127,7 +131,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
           return;
         }
         await updateOutreport(sheet, edit.id, rec);
-        toast('success', 'Outreport updated');
+        toast('success', t('form.updated'));
         trackEvent('outreport_updated', { sheet, queued: false });
         onDone({ refresh: true });
         return;
@@ -136,7 +140,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
       const id = crypto.randomUUID();
       if (!navigator.onLine) {
         await enqueue(sheet, id, rec);
-        toast('info', 'Saved on this device — will sync when online');
+        toast('info', t('form.queuedSaved'));
         trackEvent('outreport_saved', { sheet, mode: 'queued' });
         reset();
         onDone({ refresh: false });
@@ -144,7 +148,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
       }
       try {
         await saveOutreport(sheet, id, rec);
-        toast('success', 'Outreport saved');
+        toast('success', t('form.saved'));
         trackEvent('outreport_saved', { sheet, mode: 'online' });
         reset();
         onDone({ refresh: true });
@@ -159,8 +163,8 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
           toast(
             'info',
             err instanceof ApiError && err.code === 'BAD_RESPONSE'
-              ? 'Saved on this device — the Google Apps Script backend is not set up yet'
-              : 'No connection to Google Sheets — saved on this device, will sync',
+              ? t('form.backendNotSetUp')
+              : t('form.noConnectionQueued'),
           );
           reset();
           onDone({ refresh: false });
@@ -169,7 +173,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
         }
       }
     } catch (err) {
-      toast('error', err instanceof Error ? err.message : 'Could not save');
+      toast('error', apiErrorMessage(err, t, t('form.saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -206,21 +210,21 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
                   borderColor: 'divider',
                 }}
               >
-                {group.name}
+                {t(`groups.${group.name}`)}
               </Typography>
               <Stack spacing={2.25}>
                 {group.fields.map((f) => (
                   <TextField
                     key={f.header}
                     id={fieldId(f.header)}
-                    label={f.label}
+                    label={fieldLabel(f, t)}
                     required={f.required}
                     type={f.inputType}
-                    placeholder={f.placeholder}
+                    placeholder={fieldPlaceholder(f, t)}
                     value={record[f.header] ?? ''}
                     onChange={(e) => setValue(f.header, e.target.value)}
                     error={!!errors[f.header]}
-                    helperText={errors[f.header] || undefined}
+                    helperText={fieldErrorText(f, errors[f.header], t)}
                     slotProps={{
                       htmlInput: {
                         inputMode: f.inputMode,
@@ -262,10 +266,10 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
                 disabled={saving}
                 sx={{ flex: '0 0 auto' }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" size="large" variant="contained" color="success" disabled={saving} sx={{ flex: 1 }}>
-                {saving ? 'Updating…' : 'Update outreport'}
+                {saving ? t('form.updating') : t('form.update')}
               </Button>
             </>
           ) : (
@@ -278,10 +282,10 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
                 disabled={saving}
                 sx={{ flex: '0 0 auto' }}
               >
-                Clear
+                {t('form.clear')}
               </Button>
               <Button type="submit" size="large" variant="contained" color="success" disabled={saving} sx={{ flex: 1 }}>
-                {saving ? 'Saving…' : 'Save outreport'}
+                {saving ? t('form.saving') : t('form.save')}
               </Button>
             </>
           )}

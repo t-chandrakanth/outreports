@@ -4,6 +4,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import InstallMobileIcon from '@mui/icons-material/InstallMobile';
+import { useTranslation } from 'react-i18next';
 import { LOCATIONS, type Location } from '../config';
 import { useNav } from '../nav/NavContext';
 import { SyncBadge } from '../components/SyncBadge';
@@ -16,6 +17,7 @@ interface Props {
 
 export function HomeScreen({ showInstallHint, onInstall }: Props) {
   const nav = useNav();
+  const { t } = useTranslation();
 
   function pick(loc: Location) {
     if (loc.directions.length === 1) nav.push({ name: 'sheet', sheet: loc.directions[0] });
@@ -23,9 +25,9 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
   }
 
   return (
-    <Screen title="SCR TMR'S OUTREPORTS" subtitle="SOUTH CENTRAL RAILWAY" actions={<SyncBadge />}>
+    <Screen title="SCR TMR'S OUTREPORTS" subtitle={t('app.subtitle')} actions={<SyncBadge />}>
       <Typography variant="subtitle2" component="p" sx={{ color: 'text.secondary', mb: 1.5 }}>
-        Select location
+        {t('home.selectLocation')}
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
         {LOCATIONS.map((loc) => (
@@ -52,7 +54,7 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
                 {loc.code}
               </Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {loc.directions.length === 1 ? loc.directions[0] : `${loc.directions.length} directions`}
+                {loc.directions.length === 1 ? loc.directions[0] : t('home.directions', { count: loc.directions.length })}
               </Typography>
             </Paper>
           </ButtonBase>
@@ -60,7 +62,7 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
       </Box>
       {showInstallHint && (
         <Button fullWidth startIcon={<InstallMobileIcon />} onClick={onInstall} sx={{ mt: 3 }}>
-          Install this app on your phone
+          {t('home.install')}
         </Button>
       )}
     </Screen>

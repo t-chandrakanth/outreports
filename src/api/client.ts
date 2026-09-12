@@ -12,6 +12,11 @@
  */
 
 import type { ApiErrorCode, ListResponse, OutreportRecord } from '../types';
+import { ApiError, NetworkError } from './errors';
+
+// Error classes live in ./errors so UI code can use them without loading the
+// transport (which refuses to load without VITE_APPS_SCRIPT_URL).
+export { ApiError, NetworkError };
 
 const BASE_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
 const TIMEOUT_MS = 30_000; // Apps Script cold starts take 1-3s; be generous
@@ -25,21 +30,6 @@ if (!/^https?:\/\//.test(BASE_URL ?? '')) {
     'This build is missing VITE_APPS_SCRIPT_URL — redeploy with the Apps Script /exec URL set.',
   );
 }
-
-/** Server said no. Terminal unless code is BUSY. */
-export class ApiError extends Error {
-  code: ApiErrorCode;
-  constructor(code: ApiErrorCode, message: string) {
-    super(message);
-    this.code = code;
-  }
-  get retryable(): boolean {
-    return this.code === 'BUSY';
-  }
-}
-
-/** Could not reach the server at all (offline, DNS, timeout). Retryable. */
-export class NetworkError extends Error {}
 
 interface Envelope {
   ok: boolean;

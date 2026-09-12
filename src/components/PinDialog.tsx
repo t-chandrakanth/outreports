@@ -6,6 +6,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
+import { useTranslation } from 'react-i18next';
 import { useBackClose } from '../nav/NavContext';
 import { rememberedPin } from '../utils/pin';
 
@@ -22,6 +23,7 @@ interface Props {
 
 export function PinDialog({ open, title, message, confirmLabel, busy, error, onConfirm, onCancel }: Props) {
   const [pin, setPin] = useState('');
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (open) setPin(rememberedPin());
@@ -50,7 +52,7 @@ export function PinDialog({ open, title, message, confirmLabel, busy, error, onC
           <TextField
             autoFocus
             type="password"
-            label="PIN"
+            label={t('pin.label')}
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             error={!!error}
@@ -63,10 +65,10 @@ export function PinDialog({ open, title, message, confirmLabel, busy, error, onC
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={onCancel} disabled={busy} color="inherit">
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" variant="contained" color="error" disabled={busy || !pin.trim()}>
-            {busy ? 'Deleting…' : confirmLabel}
+            {busy ? t('pin.deleting') : confirmLabel}
           </Button>
         </DialogActions>
       </form>

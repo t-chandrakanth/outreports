@@ -11,10 +11,12 @@ import InputAdornment from '@mui/material/InputAdornment';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import SearchIcon from '@mui/icons-material/Search';
+import { useTranslation } from 'react-i18next';
 import { trackEvent } from '../analytics';
 import { ApiError, deleteOutreport, listOutreports } from '../api/client';
 import { useOnline } from '../hooks/useOnline';
 import { useOutbox } from '../hooks/useOutbox';
+import { apiErrorMessage } from '../i18n/errors';
 import { useBackClose } from '../nav/NavContext';
 import { readListCache, writeListCache } from '../offline/listCache';
 import { removeQueued } from '../offline/outbox';
@@ -44,7 +46,8 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
   const [data, setData] = useState<CachedList | null>(null);
   const [stale, setStale] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  // The error itself, not text: the message is resolved at render time.
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [search, setSearch] = useState('');
   const [day, setDay] = useState('');
   const [deleting, setDeleting] = useState<CardEntry | null>(null);
@@ -54,13 +57,14 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
   const online = useOnline();
   const outbox = useOutbox();
   const toast = useToast();
+  const { t } = useTranslation();
 
   // Hardware back closes the local-remove confirm instead of leaving.
   useBackClose(removingQueued !== null, () => setRemovingQueued(null));
 
   const load = useCallback(async () => {
     setLoading(true);
-    setLoadError('');
+    setLoadError(null);
     try {
       const res = await listOutreports(sheet);
       const fresh: CachedList = {
@@ -78,11 +82,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
         setData(cached);
         setStale(true);
       } else {
-        setLoadError(
-          err instanceof ApiError
-            ? err.message
-            : 'Could not load saved outreports — check your connection.',
-        );
+        setLoadError(err ?? new Error('load failed'));
       }
     } finally {
       setLoading(false);
@@ -148,20 +148,20 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
     try {
       await deleteOutreport(sheet, deleting.id, pin);
       rememberPin(pin);
-      toast('success', 'Outreport deleted');
+      toast('success', t('saved.deleted'));
       trackEvent('outreport_deleted', { sheet });
       setDeleting(null);
       await load();
     } catch (err) {
       if (err instanceof ApiError && (err.code === 'BAD_PIN' || err.code === 'PIN_NOT_CONFIGURED')) {
         forgetPin();
-        setDeleteError(err.message);
+        setDeleteError(apiErrorMessage(err, t));
       } else if (err instanceof ApiError && err.code === 'NOT_FOUND') {
-        toast('info', 'Already deleted by someone else');
+        toast('info', t('saved.alreadyDeleted'));
         setDeleting(null);
         await load();
       } else {
-        setDeleteError(err instanceof Error ? err.message : 'Could not delete');
+        setDeleteError(apiErrorMessage(err, t, t('saved.deleteFailed')));
       }
     } finally {
       setDeleteBusy(false);
@@ -175,7 +175,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
       return;
     }
     if (!online) {
-      toast('info', 'Deleting needs a connection');
+      toast('info', t('saved.deleteNeedsConnection'));
       return;
     }
     setDeleteError('');
@@ -184,7 +184,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
 
   function handleEdit(entry: CardEntry) {
     if (!entry.queueStatus && !online) {
-      toast('info', 'Editing a synced outreport needs a connection');
+      toast('info', t('saved.editNeedsConnection'));
       return;
     }
     onEdit(entry);
@@ -196,7 +196,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
         <TextField
           size="small"
           type="search"
-          placeholder="Search train, loco, BPC…"
+          placeholder={t('saved.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{ flex: 1 }}
@@ -207,7 +207,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
-              'aria-label': 'Search saved outreports',
+              'aria-label': t('saved.searchLabel'),
             },
           }}
         />
@@ -217,7 +217,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
           value={day}
           onChange={(e) => setDay(e.target.value)}
           sx={{ width: 155, flex: 'none' }}
-          slotProps={{ htmlInput: { 'aria-label': 'Filter by date' } }}
+          slotProps={{ htmlInput: { 'aria-label': t('saved.dateFilterLabel') } }}
         />
       </Box>
 
@@ -225,23 +225,27 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
         <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: 'max(16px, env(safe-area-inset-bottom))' }}>
           {stale && data && (
             <Alert severity="warning" sx={{ mb: 1.5 }}>
-              Offline — showing list as of {formatTime(data.fetchedAt)}
+              {t('saved.staleBanner', { time: formatTime(data.fetchedAt) })}
             </Alert>
           )}
 
           {loading && !data && (
             <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
-              Loading saved outreports…
+              {t('saved.loading')}
             </Typography>
           )}
-          {loadError && !data && (
-            <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>{loadError}</Typography>
+          {loadError !== null && !data && (
+            <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+              {loadError instanceof ApiError ? apiErrorMessage(loadError, t) : t('saved.loadFailed')}
+            </Typography>
           )}
 
           {data && (
             <Typography variant="caption" component="p" sx={{ color: 'text.secondary', mb: 1 }}>
-              {visible.length} outreport{visible.length === 1 ? '' : 's'}
-              {data.total > data.rows.length ? ` · showing latest ${data.rows.length} of ${data.total}` : ''}
+              {t('saved.count', { count: visible.length })}
+              {data.total > data.rows.length
+                ? t('saved.showingLatest', { shown: data.rows.length, total: data.total })
+                : ''}
             </Typography>
           )}
 
@@ -257,7 +261,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
 
           {!loading && data && visible.length === 0 && (
             <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
-              {search || day ? 'No outreports match the filter.' : 'No outreports saved yet — add one in New entry.'}
+              {search || day ? t('saved.noMatch') : t('saved.empty')}
             </Typography>
           )}
         </Box>
@@ -265,9 +269,9 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
 
       <PinDialog
         open={deleting !== null}
-        title="Delete outreport"
-        message={`Deleting ${deleting?.record['TR.NO'] || 'this entry'} removes it from the shared sheet for everyone. Enter the PIN to confirm.`}
-        confirmLabel="Delete"
+        title={t('saved.deleteTitle')}
+        message={t('saved.deleteMessage', { train: deleting?.record['TR.NO'] || t('common.thisEntry') })}
+        confirmLabel={t('common.delete')}
         busy={deleteBusy}
         error={deleteError}
         onConfirm={confirmDelete}
@@ -275,16 +279,15 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
       />
 
       <Dialog open={removingQueued !== null} onClose={() => setRemovingQueued(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Remove unsent entry?</DialogTitle>
+        <DialogTitle>{t('saved.removeTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {removingQueued?.record['TR.NO'] || 'This entry'} has not been sent to the shared sheet yet.
-            Removing it deletes it from this device only.
+            {t('saved.removeMessage', { train: removingQueued?.record['TR.NO'] || t('common.thisEntryCapital') })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button color="inherit" onClick={() => setRemovingQueued(null)}>
-            Keep it
+            {t('saved.keepIt')}
           </Button>
           <Button
             color="error"
@@ -292,10 +295,10 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
             onClick={() => {
               const entry = removingQueued;
               setRemovingQueued(null);
-              if (entry) void removeQueued(entry.id).then(() => toast('success', 'Entry removed'));
+              if (entry) void removeQueued(entry.id).then(() => toast('success', t('saved.removed')));
             }}
           >
-            Remove
+            {t('saved.remove')}
           </Button>
         </DialogActions>
       </Dialog>

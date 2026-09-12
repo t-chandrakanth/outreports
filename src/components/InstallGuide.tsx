@@ -3,12 +3,16 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import SwipeableDrawer from '@mui/material/SwipeableDrawer';
 import Typography from '@mui/material/Typography';
+import { Trans, useTranslation } from 'react-i18next';
 import { trackEvent } from '../analytics';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useBackClose } from '../nav/NavContext';
 import { useToast } from './Toast';
 
 const DISMISS_KEY = 'outreports:install-dismissed';
+
+/** <b>…</b> in install.* strings renders as <strong>. */
+const BOLD = { b: <strong /> };
 
 function wasDismissed(): boolean {
   try {
@@ -56,6 +60,7 @@ interface Props {
 export function InstallGuide({ open, onClose }: Props) {
   const { canPrompt, promptInstall, platform } = useInstallPrompt();
   const toast = useToast();
+  const { t } = useTranslation();
 
   function dismiss() {
     markDismissed();
@@ -70,7 +75,7 @@ export function InstallGuide({ open, onClose }: Props) {
     const outcome = await promptInstall();
     if (outcome === 'accepted') {
       trackEvent('install_accepted', { platform });
-      toast('success', 'Installed — find OUTREPORTS on your home screen');
+      toast('success', t('install.installed'));
       markDismissed();
       onClose();
     }
@@ -83,7 +88,7 @@ export function InstallGuide({ open, onClose }: Props) {
       onClose={dismiss}
       onOpen={() => {}}
       disableSwipeToOpen
-      aria-label="Install this app"
+      aria-label={t('install.sheetLabel')}
       slotProps={{
         paper: {
           sx: {
@@ -103,26 +108,25 @@ export function InstallGuide({ open, onClose }: Props) {
         sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: 'divider', mx: 'auto', my: 1 }}
       />
       <Typography variant="h6" component="h2" sx={{ mt: 1 }}>
-        Keep OUTREPORTS on your phone
+        {t('install.title')}
       </Typography>
       <Typography sx={{ color: 'text.secondary', mt: 0.5, mb: 1.5 }}>
-        Install it like an app — opens full screen from your home screen and
-        keeps working when the network drops.
+        {t('install.body')}
       </Typography>
 
         {platform === 'ios' && (
           <ol className="install-steps">
             <li>
               <ShareIcon />
-              <span>In <strong>Safari</strong>, tap the <strong>Share</strong> button (bottom of the screen)</span>
+              <span><Trans i18nKey="install.iosShare" components={BOLD} /></span>
             </li>
             <li>
               <PlusSquareIcon />
-              <span>Scroll down and tap <strong>Add to Home Screen</strong></span>
+              <span><Trans i18nKey="install.iosAdd" components={BOLD} /></span>
             </li>
             <li>
-              <span className="step-badge">Add</span>
-              <span>Tap <strong>Add</strong> — done</span>
+              <span className="step-badge">{t('install.iosConfirmBadge')}</span>
+              <span><Trans i18nKey="install.iosConfirm" components={BOLD} /></span>
             </li>
           </ol>
         )}
@@ -131,30 +135,30 @@ export function InstallGuide({ open, onClose }: Props) {
           <ol className="install-steps">
             <li>
               <MenuIcon />
-              <span>Open the browser menu (<strong>⋮</strong> top right)</span>
+              <span><Trans i18nKey="install.menuOpen" components={BOLD} /></span>
             </li>
             <li>
               <PlusSquareIcon />
-              <span>Tap <strong>Add to Home screen</strong> or <strong>Install app</strong></span>
+              <span><Trans i18nKey="install.menuAdd" components={BOLD} /></span>
             </li>
             <li>
-              <span className="step-badge">Install</span>
-              <span>Confirm — done</span>
+              <span className="step-badge">{t('install.menuConfirmBadge')}</span>
+              <span>{t('install.menuConfirm')}</span>
             </li>
           </ol>
         )}
 
       <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
         <Button color="inherit" variant="outlined" size="large" onClick={dismiss} sx={{ flex: '0 0 auto' }}>
-          Not now
+          {t('install.notNow')}
         </Button>
         {platform !== 'ios' && canPrompt ? (
           <Button variant="contained" color="success" size="large" onClick={() => void install()} sx={{ flex: 1 }}>
-            Install app
+            {t('install.installApp')}
           </Button>
         ) : (
           <Button variant="contained" color="success" size="large" onClick={dismiss} sx={{ flex: 1 }}>
-            Got it
+            {t('install.gotIt')}
           </Button>
         )}
       </Box>

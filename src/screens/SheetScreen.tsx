@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import { useTranslation } from 'react-i18next';
 import { EntryForm } from '../components/EntryForm';
 import type { CardEntry } from '../components/RecordCard';
 import { SavedList } from '../components/SavedList';
@@ -11,6 +12,7 @@ import { Screen } from './Screen';
 
 export function SheetScreen({ sheet }: { sheet: string }) {
   const nav = useNav();
+  const { t } = useTranslation();
   const [tab, setTab] = useState(0);
   const [refreshToken, setRefreshToken] = useState(0);
 
@@ -40,13 +42,13 @@ export function SheetScreen({ sheet }: { sheet: string }) {
         '& .MuiTabs-indicator': { backgroundColor: '#fff', height: 3 },
       }}
     >
-      <Tab id="tab-entry" aria-controls="panel-entry" label="New entry" sx={{ fontWeight: 600 }} />
-      <Tab id="tab-saved" aria-controls="panel-saved" label="Saved" sx={{ fontWeight: 600 }} />
+      <Tab id="tab-entry" aria-controls="panel-entry" label={t('sheet.tabEntry')} sx={{ fontWeight: 600 }} />
+      <Tab id="tab-saved" aria-controls="panel-saved" label={t('sheet.tabSaved')} sx={{ fontWeight: 600 }} />
     </Tabs>
   );
 
   return (
-    <Screen title={sheet} subtitle="OUTREPORT" actions={<SyncBadge />} bar={tabs} scroll={false}>
+    <Screen title={sheet} subtitle={t('sheet.subtitle')} actions={<SyncBadge />} bar={tabs} scroll={false}>
       <SwipeablePanels
         index={tab}
         onChange={setTab}

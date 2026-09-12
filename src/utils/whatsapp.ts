@@ -1,16 +1,18 @@
 import { FIELDS } from '../config';
+import { en } from '../i18n/locales/en';
 import type { OutreportRecord } from '../types';
 
 /**
  * Build a labeled, WhatsApp-friendly text block for one outreport.
- * Blank fields are omitted.
+ * Blank fields are omitted. Always English, whatever the UI language: the
+ * text lands in a shared team channel.
  */
 export function buildWhatsAppText(sheetName: string, record: OutreportRecord): string {
   const lines: string[] = [`*OUTREPORT — ${sheetName}*`];
   for (const f of FIELDS) {
     const value = (record[f.header] ?? '').trim();
     if (!value) continue;
-    lines.push(`*${f.label.toUpperCase()}:* ${value}`);
+    lines.push(`*${en.fields[f.key].toUpperCase()}:* ${value}`);
   }
   return lines.join('\n');
 }

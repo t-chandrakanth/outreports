@@ -5,6 +5,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import { useTranslation } from 'react-i18next';
 import { EntryForm, type EditTarget } from '../components/EntryForm';
 import { useBackClose, useBackGuard, useNav } from '../nav/NavContext';
 import { Screen } from './Screen';
@@ -17,6 +18,7 @@ interface Props {
 
 export function EditScreen({ sheet, target, onDone }: Props) {
   const nav = useNav();
+  const { t } = useTranslation();
   const [dirty, setDirty] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -30,7 +32,7 @@ export function EditScreen({ sheet, target, onDone }: Props) {
   }
 
   return (
-    <Screen title="Edit outreport" subtitle={sheet} scroll={false}>
+    <Screen title={t('edit.title')} subtitle={sheet} scroll={false}>
       <EntryForm
         sheet={sheet}
         edit={target}
@@ -39,15 +41,15 @@ export function EditScreen({ sheet, target, onDone }: Props) {
         onDirtyChange={setDirty}
       />
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Discard changes?</DialogTitle>
+        <DialogTitle>{t('edit.discardTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This outreport has unsaved changes. Going back will lose them.
+            {t('edit.discardBody')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)} autoFocus>
-            Keep editing
+            {t('edit.keepEditing')}
           </Button>
           <Button
             color="error"
@@ -57,7 +59,7 @@ export function EditScreen({ sheet, target, onDone }: Props) {
               nav.pop(2);
             }}
           >
-            Discard
+            {t('edit.discard')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -4,16 +4,18 @@ import ListItemText from '@mui/material/ListItemText';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useTranslation } from 'react-i18next';
 import type { Location } from '../config';
 import { useNav } from '../nav/NavContext';
 import { Screen } from './Screen';
 
 export function DirectionScreen({ location }: { location: Location }) {
   const nav = useNav();
+  const { t } = useTranslation();
   return (
-    <Screen title={location.code} subtitle="SELECT DIRECTION">
+    <Screen title={location.code} subtitle={t('direction.subtitle')}>
       <Typography variant="subtitle2" component="p" sx={{ color: 'text.secondary', mb: 1.5 }}>
-        Which outreport?
+        {t('direction.prompt')}
       </Typography>
       <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <List disablePadding>

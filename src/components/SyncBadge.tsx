@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import { useTranslation } from 'react-i18next';
 import { useOnline } from '../hooks/useOnline';
 import { useOutbox } from '../hooks/useOutbox';
 import { flushOutbox } from '../offline/outbox';
@@ -9,6 +10,7 @@ export function SyncBadge() {
   const online = useOnline();
   const outbox = useOutbox();
   const toast = useToast();
+  const { t } = useTranslation();
   const syncable = outbox.filter((it) => it.status !== 'error').length;
   const broken = outbox.length - syncable;
 
@@ -16,25 +18,25 @@ export function SyncBadge() {
 
   const label = !online
     ? outbox.length
-      ? `Offline · ${outbox.length} waiting`
-      : 'Offline'
+      ? t('sync.offlineWaiting', { count: outbox.length })
+      : t('sync.offline')
     : syncable
-      ? `${syncable} to sync`
-      : `${broken} need${broken === 1 ? 's' : ''} fixing`;
+      ? t('sync.toSync', { count: syncable })
+      : t('sync.needFixing', { count: broken });
 
   async function syncNow() {
     if (!online) {
-      toast('info', 'Still offline — entries will sync when connection returns');
+      toast('info', t('sync.stillOffline'));
       return;
     }
     if (!syncable) {
-      toast('info', 'These entries were rejected — open Saved and edit them to retry');
+      toast('info', t('sync.rejected'));
       return;
     }
     const res = await flushOutbox();
-    if (res.delivered) toast('success', `Synced ${res.delivered} outreport${res.delivered > 1 ? 's' : ''}`);
-    else if (res.stopped) toast('error', 'Could not reach Google Sheets — will retry');
-    else if (res.failed) toast('error', 'Some entries need fixing — see Saved tab');
+    if (res.delivered) toast('success', t('sync.synced', { count: res.delivered }));
+    else if (res.stopped) toast('error', t('sync.unreachable'));
+    else if (res.failed) toast('error', t('sync.someNeedFixing'));
   }
 
   const dotColor = !online || (broken && !syncable) ? 'error.light' : 'warning.light';
@@ -44,7 +46,7 @@ export function SyncBadge() {
       size="small"
       onClick={() => void syncNow()}
       label={label}
-      title="Sync now"
+      title={t('sync.syncNow')}
       icon={
         <Box
           component="span"

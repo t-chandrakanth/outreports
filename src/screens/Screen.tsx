@@ -5,6 +5,8 @@ import IconButton from '@mui/material/IconButton';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useTranslation } from 'react-i18next';
+import { LanguageMenu } from '../components/LanguageMenu';
 import { ScreenEntryContext, useNav } from '../nav/NavContext';
 
 interface Props {
@@ -25,10 +27,11 @@ interface Props {
 
 /**
  * Mobile page scaffold: station name-board app bar (back arrow on every
- * pushed screen) over a flex column body.
+ * pushed screen, language menu on every screen) over a flex column body.
  */
 export function Screen({ title, subtitle, actions, bar, scroll = true, children }: Props) {
   const nav = useNav();
+  const { t } = useTranslation();
   const entry = useContext(ScreenEntryContext);
   const showBack = (entry?.index ?? 0) > 0;
 
@@ -46,7 +49,7 @@ export function Screen({ title, subtitle, actions, bar, scroll = true, children 
         >
           <Toolbar sx={{ minHeight: 60, px: 1.5, gap: 0.5 }}>
             {showBack && (
-              <IconButton edge="start" color="inherit" aria-label="Back" onClick={() => nav.back()}>
+              <IconButton edge="start" color="inherit" aria-label={t('common.back')} onClick={() => nav.back()}>
                 <ArrowBackIcon />
               </IconButton>
             )}
@@ -65,8 +68,9 @@ export function Screen({ title, subtitle, actions, bar, scroll = true, children 
                 </Typography>
               )}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: showBack ? 40 : 0, justifyContent: 'flex-end' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: showBack ? 40 : 0, justifyContent: 'flex-end', gap: 0.5 }}>
               {actions}
+              <LanguageMenu />
             </Box>
           </Toolbar>
           {bar}

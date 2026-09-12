@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
           'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
+          'vendor-i18n': ['i18next', 'react-i18next'],
         },
       },
     },

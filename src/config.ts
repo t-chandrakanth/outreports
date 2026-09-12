@@ -2,7 +2,11 @@
  * Single source of truth for sheet names and field definitions.
  * The `header` strings MUST match the Google Sheet column headers exactly —
  * they are the record keys sent to the Apps Script API.
+ * Labels, group names and messages are translation keys (src/i18n/locales).
  */
+
+import type { Dictionary } from './i18n/locales/en';
+import { formatDateTime } from './utils/date';
 
 export interface Location {
   code: string;
@@ -18,15 +22,14 @@ export const LOCATIONS: Location[] = [
   { code: 'HYB', directions: ['HYB-DN'] },
 ];
 
-import { formatDateTime } from './utils/date';
-
-export type FieldGroup = 'Train & Loco' | 'Load & BPC' | 'Contact';
+export type FieldGroup = keyof Dictionary['groups'];
+export type FieldKey = keyof Dictionary['fields'];
 
 export interface FieldDef {
   /** Exact sheet column header (record key). */
   header: string;
-  /** Label shown in the UI. */
-  label: string;
+  /** Translation key under `fields` for the label. */
+  key: FieldKey;
   group: FieldGroup;
   inputType: 'text' | 'tel';
   /** Shown and submitted but not editable (auto-filled). */
@@ -34,38 +37,40 @@ export interface FieldDef {
   inputMode?: 'numeric' | 'decimal';
   required?: boolean;
   pattern?: RegExp;
-  patternMessage?: string;
+  /** Translation key under `form` shown when `pattern` fails. */
+  patternKey?: 'mobileInvalid';
   maxLength?: number;
-  placeholder?: string;
+  /** A sample value (data, not translated) or a translated hint key under `form`. */
+  placeholder?: { example: string } | { hint: 'mobileHint' };
 }
 
 export const FIELDS: FieldDef[] = [
-  { header: 'DATE', label: 'Date', group: 'Train & Loco', inputType: 'text', required: true, readOnly: true },
-  { header: 'TR.NO', label: 'Train No', group: 'Train & Loco', inputType: 'text', required: true, placeholder: 'e.g. KPCC' },
-  { header: 'LOCO NO', label: 'Loco No', group: 'Train & Loco', inputType: 'text', placeholder: 'e.g. 60426 or 42681+31474' },
-  { header: 'LOCO BASE AND DUE', label: 'Loco Base & Due', group: 'Train & Loco', inputType: 'text', placeholder: 'e.g. KZJ 28/09' },
-  { header: 'LOAD', label: 'Load', group: 'Load & BPC', inputType: 'text', placeholder: 'e.g. 58/58/5200' },
-  { header: 'B.UP', label: 'Break UP', group: 'Load & BPC', inputType: 'text', placeholder: 'e.g. 57BOXNL+01 BVZI' },
-  { header: 'BPC NO', label: 'BPC No', group: 'Load & BPC', inputType: 'text', inputMode: 'numeric' },
-  { header: 'RAKE-ID (IF-CC RAKE)', label: 'Rake ID (if CC rake)', group: 'Load & BPC', inputType: 'text' },
-  { header: 'BP%', label: 'BP %', group: 'Load & BPC', inputType: 'text', inputMode: 'decimal', placeholder: 'e.g. 98.30%' },
-  { header: 'VALIDITY', label: 'Validity', group: 'Load & BPC', inputType: 'text', placeholder: 'e.g. 10000 Kms / 35+05 Days' },
-  { header: 'VALID UPTO', label: 'Valid Upto', group: 'Load & BPC', inputType: 'text', placeholder: 'e.g. 20/09/2026' },
-  { header: 'I.AT', label: 'BPC Issued At', group: 'Load & BPC', inputType: 'text' },
-  { header: 'I.ON', label: 'BPC Issued On', group: 'Load & BPC', inputType: 'text' },
-  { header: 'EX', label: 'EX', group: 'Load & BPC', inputType: 'text', placeholder: 'e.g. PCCT to CCCT' },
-  { header: 'COMMODITY', label: 'Commodity', group: 'Load & BPC', inputType: 'text', placeholder: 'e.g. Clinker' },
-  { header: 'COD', label: 'COD', group: 'Load & BPC', inputType: 'text' },
-  { header: 'DEP', label: 'Taken Over Time', group: 'Load & BPC', inputType: 'text' },
+  { header: 'DATE', key: 'date', group: 'trainLoco', inputType: 'text', required: true, readOnly: true },
+  { header: 'TR.NO', key: 'trainNo', group: 'trainLoco', inputType: 'text', required: true, placeholder: { example: 'KPCC' } },
+  { header: 'LOCO NO', key: 'locoNo', group: 'trainLoco', inputType: 'text', placeholder: { example: '60426 or 42681+31474' } },
+  { header: 'LOCO BASE AND DUE', key: 'locoBase', group: 'trainLoco', inputType: 'text', placeholder: { example: 'KZJ 28/09' } },
+  { header: 'LOAD', key: 'load', group: 'loadBpc', inputType: 'text', placeholder: { example: '58/58/5200' } },
+  { header: 'B.UP', key: 'breakUp', group: 'loadBpc', inputType: 'text', placeholder: { example: '57BOXNL+01 BVZI' } },
+  { header: 'BPC NO', key: 'bpcNo', group: 'loadBpc', inputType: 'text', inputMode: 'numeric' },
+  { header: 'RAKE-ID (IF-CC RAKE)', key: 'rakeId', group: 'loadBpc', inputType: 'text' },
+  { header: 'BP%', key: 'bpPercent', group: 'loadBpc', inputType: 'text', inputMode: 'decimal', placeholder: { example: '98.30%' } },
+  { header: 'VALIDITY', key: 'validity', group: 'loadBpc', inputType: 'text', placeholder: { example: '10000 Kms / 35+05 Days' } },
+  { header: 'VALID UPTO', key: 'validUpto', group: 'loadBpc', inputType: 'text', placeholder: { example: '20/09/2026' } },
+  { header: 'I.AT', key: 'issuedAt', group: 'loadBpc', inputType: 'text' },
+  { header: 'I.ON', key: 'issuedOn', group: 'loadBpc', inputType: 'text' },
+  { header: 'EX', key: 'ex', group: 'loadBpc', inputType: 'text', placeholder: { example: 'PCCT to CCCT' } },
+  { header: 'COMMODITY', key: 'commodity', group: 'loadBpc', inputType: 'text', placeholder: { example: 'Clinker' } },
+  { header: 'COD', key: 'cod', group: 'loadBpc', inputType: 'text' },
+  { header: 'DEP', key: 'dep', group: 'loadBpc', inputType: 'text' },
   {
-    header: 'TMR MOBILE NO', label: 'TMR Mobile No', group: 'Contact', inputType: 'tel',
+    header: 'TMR MOBILE NO', key: 'mobile', group: 'contact', inputType: 'tel',
     inputMode: 'numeric', maxLength: 10,
-    pattern: /^[0-9]{10}$/, patternMessage: 'Must be a 10 digit mobile number',
-    placeholder: '10 digit mobile no',
+    pattern: /^[0-9]{10}$/, patternKey: 'mobileInvalid',
+    placeholder: { hint: 'mobileHint' },
   },
 ];
 
-export const FIELD_GROUPS: FieldGroup[] = ['Train & Loco', 'Load & BPC', 'Contact'];
+export const FIELD_GROUPS: FieldGroup[] = ['trainLoco', 'loadBpc', 'contact'];
 
 /** Headers used for card summaries. */
 export const SUMMARY = {

@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 import { initAnalytics } from './analytics';
+import './i18n'; // initialises translations before the first render
 import { flushOutbox, normalizeOutbox } from './offline/outbox';
 import { initPWA } from './pwa';
 import { theme } from './theme';

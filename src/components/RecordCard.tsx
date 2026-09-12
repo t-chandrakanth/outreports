@@ -13,7 +13,9 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useTranslation } from 'react-i18next';
 import { FIELDS, SUMMARY } from '../config';
+import { fieldLabel } from '../i18n/fields';
 import type { OutreportRecord, QueueStatus } from '../types';
 import { buildWhatsAppText, copyOrShare } from '../utils/whatsapp';
 import { useToast } from './Toast';
@@ -36,6 +38,7 @@ interface Props {
 export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
   const [open, setOpen] = useState(false);
   const toast = useToast();
+  const { t } = useTranslation();
   const { record } = entry;
 
   const accent =
@@ -48,9 +51,9 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
   async function copy() {
     try {
       const how = await copyOrShare(buildWhatsAppText(sheet, record));
-      toast('success', how === 'copied' ? 'Copied — paste into WhatsApp' : 'Shared');
+      toast('success', how === 'copied' ? t('card.copied') : t('card.shared'));
     } catch (err) {
-      toast('error', err instanceof Error ? err.message : 'Could not copy');
+      toast('error', t('card.copyFailed'));
     }
   }
 
@@ -71,10 +74,10 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
               {record[SUMMARY.date]}
             </Typography>
           </Box>
-          {entry.queueStatus === 'error' && <Chip label="needs fix" color="error" size="small" />}
+          {entry.queueStatus === 'error' && <Chip label={t('card.needsFix')} color="error" size="small" />}
           {(entry.queueStatus === 'pending' || entry.queueStatus === 'syncing') && (
             <Chip
-              label={entry.queueStatus === 'syncing' ? 'syncing…' : 'waiting to sync'}
+              label={entry.queueStatus === 'syncing' ? t('card.syncing') : t('card.waiting')}
               color="warning"
               size="small"
               variant="outlined"
@@ -96,7 +99,7 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
         <Box sx={{ px: 2, py: 1.5 }}>
           {entry.queueStatus === 'error' && entry.queueMessage && (
             <Alert severity="error" sx={{ mb: 1.5 }}>
-              {entry.queueMessage} — edit this entry and save again.
+              {t('card.errorHint', { message: entry.queueMessage })}
             </Alert>
           )}
           <Box component="dl" className="detail-grid">
@@ -105,7 +108,7 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
               if (!value) return null;
               return (
                 <Box key={f.header} sx={{ display: 'contents' }}>
-                  <dt>{f.label}</dt>
+                  <dt>{fieldLabel(f, t)}</dt>
                   <dd>{value}</dd>
                 </Box>
               );
@@ -118,12 +121,12 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
             startIcon={<EditOutlinedIcon />}
             onClick={() => onEdit(entry)}
             disabled={entry.queueStatus === 'syncing' || noId}
-            title={noId ? 'Refresh the list to enable editing' : undefined}
+            title={noId ? t('card.refreshToEdit') : undefined}
           >
-            Edit
+            {t('common.edit')}
           </Button>
           <Button size="small" startIcon={<ContentCopyIcon />} onClick={copy}>
-            WhatsApp
+            {t('card.whatsapp')}
           </Button>
           <Box sx={{ flex: 1 }} />
           <Button
@@ -132,9 +135,9 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
             startIcon={<DeleteOutlineIcon />}
             onClick={() => onDelete(entry)}
             disabled={entry.queueStatus === 'syncing' || noId}
-            title={noId ? 'Refresh the list to enable deleting' : undefined}
+            title={noId ? t('card.refreshToDelete') : undefined}
           >
-            Delete
+            {t('common.delete')}
           </Button>
         </CardActions>
       </Collapse>
