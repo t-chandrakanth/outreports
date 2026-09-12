@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env.local
+.vercel/
+.playwright-mcp/
+.DS_Store
+*.local

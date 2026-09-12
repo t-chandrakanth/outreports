@@ -1,0 +1,342 @@
+/**
+ * SCR TMR'S OUTREPORTS — Backend API + legacy UI support
+ * =======================================================
+ * PASTE THIS ENTIRE FILE over the contents of Code.gs in the Apps Script editor.
+ *
+ * One-time setup after pasting:
+ *   1. Set LEGACY_HTML_FILE below to the name of your HTML file
+ *      (see the left sidebar of the editor, e.g. "Index" for Index.html).
+ *   2. Project Settings (gear icon) -> Script Properties -> Add:
+ *        Property: DELETE_PIN    Value: <your chosen PIN>
+ *   3. Deploy -> Manage deployments -> select the Web app -> pencil (Edit)
+ *      -> Version: New version -> Deploy.   (NEVER "New deployment" — that
+ *      would create a different URL.)
+ *   4. Confirm: Execute as: Me / Who has access: Anyone (plain "Anyone").
+ *   5. Test: open  <EXEC_URL>?action=ping  -> {"ok":true,"version":1}
+ */
+
+// ============ CONFIG ============
+
+var LEGACY_HTML_FILE = 'Index'; // <-- name of your HTML file WITHOUT .html
+
+var ALLOWED_SHEETS = [
+  'SNF-WADI UP', 'WADI-SNF DN',
+  'MTMI-DKJ UP', 'MTMI-DKJ DN',
+  'BPA-BPQ UP',  'BPQ-BPA DN',
+  'NZB-RDM UP',  'RDM-NZB DN',
+  'RC-DN',       'HYB-DN'
+];
+
+var ID_HEADER = '_ID';
+var API_VERSION = 1;
+var DEFAULT_LIMIT = 500;
+
+// ============ ENTRY POINTS ============
+
+function doGet(e) {
+  if (e && e.parameter && e.parameter.action) {
+    return jsonOut(safeRoute(e.parameter)); // JSON API mode
+  }
+  // Legacy mode: serve the original web app UI unchanged.
+  return HtmlService.createHtmlOutputFromFile(LEGACY_HTML_FILE)
+    .setTitle("SCR TMR'S OUTREPORTS")
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+}
+
+function doPost(e) {
+  var req;
+  try {
+    req = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonOut({ ok: false, error: 'BAD_JSON', message: 'Request body must be JSON' });
+  }
+  return jsonOut(safeRoute(req));
+}
+
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function safeRoute(req) {
+  try {
+    return route(req);
+  } catch (err) {
+    return { ok: false, error: 'INTERNAL', message: String(err && err.message ? err.message : err) };
+  }
+}
+
+// ============ ROUTER ============
+
+function route(req) {
+  var action = String(req.action || '');
+
+  if (action === 'ping') {
+    return { ok: true, version: API_VERSION };
+  }
+
+  var sheetName = String(req.sheet || '');
+  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) {
+    return { ok: false, error: 'BAD_SHEET', message: 'Unknown sheet: ' + sheetName };
+  }
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    return { ok: false, error: 'BAD_SHEET', message: 'Sheet tab not found: ' + sheetName };
+  }
+
+  switch (action) {
+    case 'list':
+      return apiList(sheet, Number(req.limit) || DEFAULT_LIMIT);
+    case 'save':
+      return withLock(function () { return apiSave(sheet, req.id, req.record); });
+    case 'update':
+      return withLock(function () { return apiUpdate(sheet, req.id, req.record); });
+    case 'delete':
+      if (!checkPin(req.pin)) return pinError();
+      return withLock(function () { return apiDelete(sheet, req.id); });
+    default:
+      return { ok: false, error: 'UNKNOWN_ACTION', message: 'Unknown action: ' + action };
+  }
+}
+
+function withLock(fn) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return { ok: false, error: 'BUSY', message: 'Sheet is busy, please retry' };
+  }
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function checkPin(pin) {
+  var expected = PropertiesService.getScriptProperties().getProperty('DELETE_PIN');
+  return !!expected && String(pin) === expected;
+}
+
+function pinError() {
+  var configured = PropertiesService.getScriptProperties().getProperty('DELETE_PIN');
+  return configured
+    ? { ok: false, error: 'BAD_PIN', message: 'Incorrect PIN' }
+    : { ok: false, error: 'PIN_NOT_CONFIGURED', message: 'Set DELETE_PIN in Script Properties' };
+}
+
+// ============ HELPERS ============
+
+/** Returns 1-based column index of _ID, creating the header if missing. */
+function ensureIdColumn(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol === 0) throw new Error('Sheet has no header row');
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i]).trim() === ID_HEADER) return i + 1;
+  }
+  sheet.getRange(1, lastCol + 1).setValue(ID_HEADER);
+  return lastCol + 1;
+}
+
+/** Returns 1-based row number for the record with the given id, or 0. */
+function findRowById(sheet, idCol, id) {
+  if (!id) return 0;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+  var finder = sheet.getRange(2, idCol, lastRow - 1, 1)
+    .createTextFinder(String(id))
+    .matchEntireCell(true);
+  var cell = finder.findNext();
+  return cell ? cell.getRow() : 0;
+}
+
+// Server-side validation stays permissive (parity with the legacy app and
+// with existing sheet data): only the mobile number format is enforced.
+// The PWA client additionally requires DATE and TRAIN NO before submitting.
+function validateRecord(record) {
+  if (!record || typeof record !== 'object') {
+    return 'Missing record';
+  }
+  var mobile = String(record['TMR MOBILE NO'] || '').trim();
+  if (mobile !== '' && !/^[0-9]{10}$/.test(mobile)) {
+    return 'TMR MOBILE NO must be 10 digits';
+  }
+  return '';
+}
+
+// ============ API ACTIONS ============
+
+function apiSave(sheet, id, record) {
+  id = String(id || '').trim();
+  if (!id) return { ok: false, error: 'VALIDATION', message: 'Missing record id' };
+
+  var problem = validateRecord(record);
+  if (problem) return { ok: false, error: 'VALIDATION', message: problem };
+
+  var idCol = ensureIdColumn(sheet);
+
+  // Idempotency: if this id already exists the earlier save succeeded.
+  if (findRowById(sheet, idCol, id)) {
+    return { ok: true, id: id, duplicate: true };
+  }
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var row = headers.map(function (h) {
+    var header = String(h).trim();
+    if (header === ID_HEADER) return id;
+    return record.hasOwnProperty(header) ? String(record[header]) : '';
+  });
+  sheet.appendRow(row);
+  return { ok: true, id: id };
+}
+
+function apiUpdate(sheet, id, record) {
+  id = String(id || '').trim();
+  if (!id) return { ok: false, error: 'VALIDATION', message: 'Missing record id' };
+
+  var problem = validateRecord(record);
+  if (problem) return { ok: false, error: 'VALIDATION', message: problem };
+
+  var idCol = ensureIdColumn(sheet);
+  var rowNum = findRowById(sheet, idCol, id);
+  if (!rowNum) return { ok: false, error: 'NOT_FOUND', message: 'Record not found (it may have been deleted)' };
+
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var row = headers.map(function (h, i) {
+    var header = String(h).trim();
+    if (header === ID_HEADER) return id;
+    if (record.hasOwnProperty(header)) return String(record[header]);
+    // keep existing value for any column the client did not send
+    return sheet.getRange(rowNum, i + 1).getDisplayValue();
+  });
+  sheet.getRange(rowNum, 1, 1, lastCol).setValues([row]);
+  return { ok: true, id: id };
+}
+
+function apiDelete(sheet, id) {
+  id = String(id || '').trim();
+  if (!id) return { ok: false, error: 'VALIDATION', message: 'Missing record id' };
+
+  var idCol = ensureIdColumn(sheet);
+  var rowNum = findRowById(sheet, idCol, id);
+  if (!rowNum) return { ok: false, error: 'NOT_FOUND', message: 'Record not found (it may already be deleted)' };
+
+  sheet.deleteRow(rowNum);
+  return { ok: true, id: id };
+}
+
+function apiList(sheet, limit) {
+  var idCol = ensureIdColumn(sheet);
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+
+  var headerRow = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+
+  // Backfill _ID for legacy rows (created by the old UI) so they can be
+  // edited/deleted. Non-blocking: skip if another execution holds the lock.
+  if (lastRow >= 2) {
+    var idRange = sheet.getRange(2, idCol, lastRow - 1, 1);
+    var idValues = idRange.getValues();
+    var needsBackfill = idValues.some(function (r) { return String(r[0]).trim() === ''; });
+    if (needsBackfill) {
+      var lock = LockService.getScriptLock();
+      if (lock.tryLock(5000)) {
+        try {
+          // Re-read inside the lock in case another execution just backfilled.
+          idValues = idRange.getValues();
+          for (var i = 0; i < idValues.length; i++) {
+            if (String(idValues[i][0]).trim() === '') {
+              idValues[i][0] = Utilities.getUuid();
+            }
+          }
+          idRange.setValues(idValues);
+        } finally {
+          lock.releaseLock();
+        }
+      }
+    }
+  }
+
+  var headers = [];
+  var dataColIdx = []; // 0-based indexes of non-_ID columns
+  for (var c = 0; c < headerRow.length; c++) {
+    if (String(headerRow[c]).trim() === ID_HEADER) continue;
+    headers.push(headerRow[c]);
+    dataColIdx.push(c);
+  }
+
+  var rows = [];
+  var total = Math.max(0, lastRow - 1);
+  if (total > 0) {
+    var values = sheet.getRange(2, 1, total, lastCol).getDisplayValues();
+    var ids = sheet.getRange(2, idCol, total, 1).getValues();
+    var start = Math.max(0, total - limit);
+    // newest first: walk from the bottom of the sheet upwards
+    for (var r = total - 1; r >= start; r--) {
+      rows.push({
+        id: String(ids[r][0]),
+        cells: dataColIdx.map(function (ci) { return values[r][ci]; })
+      });
+    }
+  }
+
+  return { ok: true, headers: headers, rows: rows, total: total };
+}
+
+// ============ LEGACY FUNCTIONS (keep the OLD web app UI working) ============
+// The original Index.html calls these via google.script.run.
+
+function saveRecord(sheetName, record) {
+  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) throw new Error('Unknown sheet: ' + sheetName);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+  var result = withLock(function () {
+    return apiSave(sheet, Utilities.getUuid(), record);
+  });
+  if (!result.ok) throw new Error(result.message);
+  return true;
+}
+
+function getSheetData(sheetName) {
+  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) throw new Error('Unknown sheet: ' + sheetName);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  var headerRow = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+
+  var headers = [];
+  var dataColIdx = [];
+  for (var c = 0; c < headerRow.length; c++) {
+    if (String(headerRow[c]).trim() === ID_HEADER) continue; // hide _ID from old UI
+    headers.push(headerRow[c]);
+    dataColIdx.push(c);
+  }
+
+  var data = [];
+  if (lastRow >= 2) {
+    var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
+    data = values.map(function (row) {
+      return dataColIdx.map(function (ci) { return row[ci]; });
+    });
+  }
+  return { headers: headers, data: data };
+}
+
+function deleteRecord(sheetName, rowNumber) {
+  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) throw new Error('Unknown sheet: ' + sheetName);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+  var result = withLock(function () {
+    var n = Number(rowNumber);
+    if (!n || n < 2 || n > sheet.getLastRow()) throw new Error('Invalid row: ' + rowNumber);
+    sheet.deleteRow(n);
+    return { ok: true };
+  });
+  if (!result.ok) throw new Error(result.message);
+  return true;
+}
