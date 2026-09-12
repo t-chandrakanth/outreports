@@ -47,6 +47,11 @@ Phone / desktop browser
 To change the PIN later: edit the `DELETE_PIN` Script Property (no redeploy
 needed).
 
+To add a location (new sheet tab): create the tab with the same header row as
+the others, add its name to `ALLOWED_SHEETS` in `apps-script/Code.gs`, redeploy
+(step 5), then add it to `LOCATIONS` in `src/config.ts`. Deploy the backend
+first — the app rejects saves to tabs the backend does not list.
+
 ## Development
 
 ```bash

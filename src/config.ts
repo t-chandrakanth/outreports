@@ -20,6 +20,8 @@ export const LOCATIONS: Location[] = [
   { code: 'NZB', directions: ['NZB-RDM UP', 'RDM-NZB DN'] },
   { code: 'RC', directions: ['RC-DN'] },
   { code: 'HYB', directions: ['HYB-DN'] },
+  { code: 'SNF', directions: ['SNF-KZJ', 'KZJ-SNF'] },
+  { code: 'BDCR', directions: ['BDCR-DKJ', 'DKJ-BDCR'] },
 ];
 
 export type FieldGroup = keyof Dictionary['groups'];
@@ -56,12 +58,12 @@ export const FIELDS: FieldDef[] = [
   { header: 'BP%', key: 'bpPercent', group: 'loadBpc', inputType: 'text', inputMode: 'decimal', placeholder: { example: '98.30%' } },
   { header: 'VALIDITY', key: 'validity', group: 'loadBpc', inputType: 'text', placeholder: { example: '10000 Kms / 35+05 Days' } },
   { header: 'VALID UPTO', key: 'validUpto', group: 'loadBpc', inputType: 'text', placeholder: { example: '20/09/2026' } },
-  { header: 'I.AT', key: 'issuedAt', group: 'loadBpc', inputType: 'text' },
-  { header: 'I.ON', key: 'issuedOn', group: 'loadBpc', inputType: 'text' },
+  { header: 'ISSUED AT', key: 'issuedAt', group: 'loadBpc', inputType: 'text' },
+  { header: 'ISSUED ON', key: 'issuedOn', group: 'loadBpc', inputType: 'text' },
   { header: 'EX', key: 'ex', group: 'loadBpc', inputType: 'text', placeholder: { example: 'PCCT to CCCT' } },
   { header: 'COMMODITY', key: 'commodity', group: 'loadBpc', inputType: 'text', placeholder: { example: 'Clinker' } },
   { header: 'COD', key: 'cod', group: 'loadBpc', inputType: 'text' },
-  { header: 'DEP', key: 'dep', group: 'loadBpc', inputType: 'text' },
+  { header: 'T/O TIME', key: 'dep', group: 'loadBpc', inputType: 'text' },
   {
     header: 'TMR MOBILE NO', key: 'mobile', group: 'contact', inputType: 'tel',
     inputMode: 'numeric', maxLength: 10,

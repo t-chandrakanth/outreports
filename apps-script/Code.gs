@@ -24,7 +24,9 @@ var ALLOWED_SHEETS = [
   'MTMI-DKJ UP', 'MTMI-DKJ DN',
   'BPA-BPQ UP',  'BPQ-BPA DN',
   'NZB-RDM UP',  'RDM-NZB DN',
-  'RC-DN',       'HYB-DN'
+  'RC-DN',       'HYB-DN',
+  'SNF-KZJ',     'KZJ-SNF',
+  'BDCR-DKJ',    'DKJ-BDCR'
 ];
 
 var ID_HEADER = '_ID';
