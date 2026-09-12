@@ -6,9 +6,15 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { trackEvent } from '../analytics';
 import { en } from './locales/en';
+import { hi } from './locales/hi';
+import { te } from './locales/te';
 
 /** Menu order. Each name is written in its own script. */
-export const LANGUAGES = [{ code: 'en', name: 'English' }] as const;
+export const LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'te', name: 'తెలుగు' },
+  { code: 'hi', name: 'हिन्दी' },
+] as const;
 
 export type LanguageCode = (typeof LANGUAGES)[number]['code'];
 
@@ -67,6 +73,8 @@ const initial = detectLanguage(readStored(), browserLanguages());
 void i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
+    te: { translation: te },
+    hi: { translation: hi },
   },
   lng: initial,
   fallbackLng: 'en',

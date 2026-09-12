@@ -62,7 +62,13 @@ export function Screen({ title, subtitle, actions, bar, scroll = true, children 
                   variant="caption"
                   noWrap
                   component="p"
-                  sx={{ color: 'rgba(255,255,255,0.95)', letterSpacing: '0.14em', fontSize: '0.7rem' }}
+                  sx={{
+                    color: 'rgba(255,255,255,0.95)',
+                    letterSpacing: '0.14em',
+                    fontSize: '0.7rem',
+                    // Tracking suits Latin capitals; it pulls Telugu/Devanagari glyph clusters apart.
+                    'html:not([lang="en"]) &': { letterSpacing: 'normal', fontSize: '0.75rem' },
+                  }}
                 >
                   {subtitle}
                 </Typography>

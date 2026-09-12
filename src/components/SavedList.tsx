@@ -207,8 +207,9 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
-              'aria-label': t('saved.searchLabel'),
             },
+            // On the <input> itself: on the wrapper it never reached assistive tech.
+            htmlInput: { 'aria-label': t('saved.searchLabel') },
           }}
         />
         <TextField

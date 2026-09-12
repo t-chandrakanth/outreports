@@ -72,6 +72,25 @@ vercel env add VITE_APPS_SCRIPT_URL production   # once (paste the /exec URL)
 vercel --prod                                    # every deploy
 ```
 
+## Languages
+
+The UI is available in English, Telugu (తెలుగు) and Hindi (हिन्दी). Users
+switch from the globe button in the app bar; the choice is stored on the
+device. A first visit follows the phone's language when it is Telugu or
+Hindi, otherwise English.
+
+- Strings live in `src/i18n/locales/`. `en.ts` is the schema. `te.ts` and
+  `hi.ts` are typed against it, so a missing key fails `npm run build`, and
+  `npm test` checks that every `{{variable}}` and `<b>` tag is kept.
+- To add a string, add the key to all three files and use
+  `const { t } = useTranslation()` then `t('section.key')`.
+- Not translated on purpose: sheet names, location codes, sheet column
+  headers, the app name, and the WhatsApp share text (the team channel reads
+  English). Browser button names in the install guide stay English because
+  that is what most phones show.
+- Server error messages are translated by error code in `src/i18n/errors.ts`;
+  `VALIDATION` and `INTERNAL` show the server's own text.
+
 ## Analytics
 
 The production build loads [Vercel Web Analytics](https://vercel.com/docs/analytics)

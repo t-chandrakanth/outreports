@@ -11,6 +11,7 @@ import { apiErrorMessage } from '../i18n/errors';
 import { fieldErrorText, fieldLabel, fieldPlaceholder, validateField } from '../i18n/fields';
 import { en } from '../i18n/locales/en';
 import type { ApiErrorCode } from '../types';
+import { buildWhatsAppText } from '../utils/whatsapp';
 
 const t = i18n.t;
 const field = (header: string) => FIELDS.find((f) => f.header === header)!;
@@ -26,6 +27,37 @@ describe('detectLanguage', () => {
     expect(detectLanguage('en', ['fr-FR'])).toBe('en');
     expect(detectLanguage('xx', [])).toBe('en');
     expect(detectLanguage(null, ['fr-FR', 'de'])).toBe('en');
+    expect(detectLanguage('hi', ['te-IN'])).toBe('hi');
+  });
+});
+
+describe('detectLanguage from the browser', () => {
+  it('picks the first supported browser language by its base tag', () => {
+    expect(detectLanguage(null, ['te-IN'])).toBe('te');
+    expect(detectLanguage(null, ['fr-FR', 'HI-in', 'te'])).toBe('hi');
+  });
+});
+
+describe('switching to Telugu and Hindi', () => {
+  it('persists, sets <html lang>, reports the change and translates', async () => {
+    await setLanguage('te');
+    expect(localStorage.getItem('outreports:lang')).toBe('te');
+    expect(document.documentElement.lang).toBe('te');
+    expect(trackEvent).toHaveBeenCalledWith('language_changed', { from: 'en', to: 'te' });
+    expect(t('saved.count', { count: 2 })).toBe('2 అవుట్‌రిపోర్ట్‌లు');
+    expect(apiErrorMessage(new ApiError('BAD_PIN', 'Incorrect PIN'), t)).toBe('తప్పు PIN');
+
+    await setLanguage('hi');
+    expect(currentLanguage()).toBe('hi');
+    expect(trackEvent).toHaveBeenLastCalledWith('language_changed', { from: 'te', to: 'hi' });
+    expect(t('home.directions', { count: 2 })).toBe('2 दिशाएँ');
+    expect(fieldErrorText(field('TR.NO'), 'required', t)).toBe('ट्रेन नंबर आवश्यक है');
+  });
+
+  it('keeps the WhatsApp share text in English', async () => {
+    await setLanguage('hi');
+    const text = buildWhatsAppText('RC-DN', { 'TR.NO': 'KPCC' });
+    expect(text).toContain('*TRAIN NO:* KPCC');
   });
 });
 
@@ -89,7 +121,7 @@ describe('field helpers', () => {
     expect(fieldLabel(train, t)).toBe('Train No');
     expect(fieldPlaceholder(train, t)).toBe('e.g. KPCC');
     expect(fieldPlaceholder(mobile, t)).toBe('10 digit mobile no');
-    expect(fieldPlaceholder(field('I.AT'), t)).toBeUndefined();
+    expect(fieldPlaceholder(field('ISSUED AT'), t)).toBeUndefined();
 
     expect(validateField(train, '')).toBe('required');
     expect(validateField(mobile, '12345')).toBe('pattern');
