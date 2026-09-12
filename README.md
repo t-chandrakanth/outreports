@@ -72,6 +72,29 @@ vercel env add VITE_APPS_SCRIPT_URL production   # once (paste the /exec URL)
 vercel --prod                                    # every deploy
 ```
 
+## Analytics
+
+The production build loads [Vercel Web Analytics](https://vercel.com/docs/analytics)
+and [Speed Insights](https://vercel.com/docs/speed-insights) through
+`src/analytics.ts`. Dev builds, the mock backend and tests send nothing.
+
+One-time setup: in the Vercel dashboard open the project, then enable
+**Analytics** and **Speed Insights**. Custom events need a plan that includes
+them; on a plan without them, page views and Web Vitals still work.
+
+Custom events (properties never include record contents, numbers, PINs or ids):
+
+| Event | Properties |
+|---|---|
+| `outreport_saved` | `sheet`, `mode` (`online` / `queued`) |
+| `outreport_updated` | `sheet`, `queued` |
+| `outreport_deleted` | `sheet` |
+| `queue_synced` | `delivered`, `stopped` |
+| `queue_failed` | `failed`, `stopped` |
+| `language_changed` | `from`, `to` |
+| `install_prompted` / `install_accepted` | `platform` |
+| `client_error` | `name`, `message` (truncated, digit runs masked), `source` |
+
 ## Security model
 
 Anyone with the app (or Apps Script) URL can view and add outreports —

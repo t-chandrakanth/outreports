@@ -52,6 +52,12 @@ export default defineConfig(({ mode }) => {
             urlPattern: /^https:\/\/script\.google(usercontent)?\.com\//,
             handler: 'NetworkOnly',
           },
+          {
+            // Vercel Analytics / Speed Insights script and beacons: never
+            // served stale from a cache, never replayed.
+            urlPattern: /^https?:\/\/[^/]+\/_vercel\/(insights|speed-insights)\//,
+            handler: 'NetworkOnly',
+          },
         ],
       },
     }),

@@ -11,6 +11,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import SearchIcon from '@mui/icons-material/Search';
+import { trackEvent } from '../analytics';
 import { ApiError, deleteOutreport, listOutreports } from '../api/client';
 import { useOnline } from '../hooks/useOnline';
 import { useOutbox } from '../hooks/useOutbox';
@@ -148,6 +149,7 @@ export function SavedList({ sheet, refreshToken, onEdit }: Props) {
       await deleteOutreport(sheet, deleting.id, pin);
       rememberPin(pin);
       toast('success', 'Outreport deleted');
+      trackEvent('outreport_deleted', { sheet });
       setDeleting(null);
       await load();
     } catch (err) {

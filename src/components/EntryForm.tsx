@@ -5,6 +5,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { trackEvent } from '../analytics';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
 import { emptyRecord, FIELD_GROUPS, FIELDS } from '../config';
 import { setFormDirty } from '../pwa';
@@ -106,12 +107,14 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
           const stillQueued = await updateQueued(edit.id, rec);
           if (stillQueued) {
             toast('success', 'Entry updated — will sync when online');
+            trackEvent('outreport_updated', { sheet, queued: true });
             onDone({ refresh: false });
             return;
           }
           try {
             await updateOutreport(sheet, edit.id, rec); // it synced meanwhile
             toast('success', 'Outreport updated');
+            trackEvent('outreport_updated', { sheet, queued: false });
             onDone({ refresh: true });
           } catch (err) {
             if (err instanceof ApiError && err.code === 'NOT_FOUND') {
@@ -125,6 +128,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
         }
         await updateOutreport(sheet, edit.id, rec);
         toast('success', 'Outreport updated');
+        trackEvent('outreport_updated', { sheet, queued: false });
         onDone({ refresh: true });
         return;
       }
@@ -133,6 +137,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
       if (!navigator.onLine) {
         await enqueue(sheet, id, rec);
         toast('info', 'Saved on this device — will sync when online');
+        trackEvent('outreport_saved', { sheet, mode: 'queued' });
         reset();
         onDone({ refresh: false });
         return;
@@ -140,6 +145,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
       try {
         await saveOutreport(sheet, id, rec);
         toast('success', 'Outreport saved');
+        trackEvent('outreport_saved', { sheet, mode: 'online' });
         reset();
         onDone({ refresh: true });
       } catch (err) {
@@ -149,6 +155,7 @@ export function EntryForm({ sheet, edit, onDone, onCancel, onDirtyChange }: Prop
         ) {
           // Keep the entry safe locally; the outbox will retry.
           await enqueue(sheet, id, rec);
+          trackEvent('outreport_saved', { sheet, mode: 'queued' });
           toast(
             'info',
             err instanceof ApiError && err.code === 'BAD_RESPONSE'

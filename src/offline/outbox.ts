@@ -17,6 +17,7 @@
  * - duplicate:true from the server is a success (idempotent retry).
  */
 
+import { trackEvent } from '../analytics';
 import { get, update } from 'idb-keyval';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
 import type { OutreportRecord, QueueItem } from '../types';
@@ -127,6 +128,16 @@ async function removeIfUnchanged(id: string, delivered: OutreportRecord): Promis
 
 let flushing: Promise<FlushResult> | null = null;
 
+/**
+ * Reported once per flush run (not per caller: runs are shared). Empty runs
+ * and retryable stops are routine offline behaviour and are not reported,
+ * which keeps the 60 s retry timer from emitting an event every minute.
+ */
+function reportFlush(res: FlushResult): void {
+  if (res.delivered > 0) trackEvent('queue_synced', { delivered: res.delivered, stopped: res.stopped });
+  if (res.failed > 0) trackEvent('queue_failed', { failed: res.failed, stopped: res.stopped });
+}
+
 export interface FlushResult {
   delivered: number;
   failed: number;
@@ -135,9 +146,14 @@ export interface FlushResult {
 
 /** Single-flight: concurrent calls share one run. */
 export function flushOutbox(): Promise<FlushResult> {
-  flushing ??= doFlush().finally(() => {
-    flushing = null;
-  });
+  flushing ??= doFlush()
+    .then((res) => {
+      reportFlush(res);
+      return res;
+    })
+    .finally(() => {
+      flushing = null;
+    });
   return flushing;
 }
 

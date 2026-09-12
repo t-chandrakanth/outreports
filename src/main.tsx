@@ -3,12 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
+import { initAnalytics } from './analytics';
 import { flushOutbox, normalizeOutbox } from './offline/outbox';
 import { initPWA } from './pwa';
 import { theme } from './theme';
 import './styles/global.css';
 import './styles/nav.css';
 
+initAnalytics();
 initPWA();
 
 // Items left as 'syncing' by an interrupted flush must be unlocked even when

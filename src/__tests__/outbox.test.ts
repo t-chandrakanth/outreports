@@ -13,8 +13,11 @@ vi.mock('../api/client', () => {
   return { ApiError, NetworkError, saveOutreport: vi.fn(), updateOutreport: vi.fn() };
 });
 
+vi.mock('../analytics', () => ({ trackEvent: vi.fn() }));
+
 import { clear } from 'idb-keyval';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
+import { trackEvent } from '../analytics';
 import { enqueue, flushOutbox, getOutbox, removeQueued, updateQueued } from '../offline/outbox';
 
 const mockSave = vi.mocked(saveOutreport);
@@ -136,5 +139,27 @@ describe('outbox flush', () => {
     await enqueue('RC-DN', 'id-1', {});
     await removeQueued('id-1');
     expect(await getOutbox()).toHaveLength(0);
+  });
+});
+
+describe('outbox flush analytics', () => {
+  it('reports one queue_synced per run and nothing for an empty run', async () => {
+    vi.mocked(trackEvent).mockReset();
+    await flushOutbox();
+    expect(trackEvent).not.toHaveBeenCalled();
+
+    mockSave.mockResolvedValue({});
+    await enqueue('RC-DN', 'id-a', { 'TR.NO': 'A' });
+    await Promise.all([flushOutbox(), flushOutbox()]); // shared single-flight run
+    expect(trackEvent).toHaveBeenCalledTimes(1);
+    expect(trackEvent).toHaveBeenCalledWith('queue_synced', { delivered: 1, stopped: false });
+  });
+
+  it('reports terminal rejections as queue_failed', async () => {
+    vi.mocked(trackEvent).mockReset();
+    mockSave.mockRejectedValue(new ApiError('VALIDATION', 'bad'));
+    await enqueue('RC-DN', 'id-b', { 'TR.NO': 'B' });
+    await flushOutbox();
+    expect(trackEvent).toHaveBeenCalledWith('queue_failed', { failed: 1, stopped: false });
   });
 });

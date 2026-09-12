@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import SwipeableDrawer from '@mui/material/SwipeableDrawer';
 import Typography from '@mui/material/Typography';
+import { trackEvent } from '../analytics';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useBackClose } from '../nav/NavContext';
 import { useToast } from './Toast';
@@ -65,8 +66,10 @@ export function InstallGuide({ open, onClose }: Props) {
   useBackClose(open, dismiss);
 
   async function install() {
+    trackEvent('install_prompted', { platform });
     const outcome = await promptInstall();
     if (outcome === 'accepted') {
+      trackEvent('install_accepted', { platform });
       toast('success', 'Installed — find OUTREPORTS on your home screen');
       markDismissed();
       onClose();
