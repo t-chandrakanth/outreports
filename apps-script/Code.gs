@@ -135,6 +135,10 @@ function ensureIdColumn(sheet) {
   for (var i = 0; i < headers.length; i++) {
     if (String(headers[i]).trim() === ID_HEADER) return i + 1;
   }
+  // Grow the grid if the sheet has no spare column to hold _ID.
+  if (sheet.getMaxColumns() <= lastCol) {
+    sheet.insertColumnAfter(lastCol);
+  }
   sheet.getRange(1, lastCol + 1).setValue(ID_HEADER);
   return lastCol + 1;
 }
