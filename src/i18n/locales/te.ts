@@ -19,6 +19,7 @@ export const te: Dictionary = {
   },
   language: {
     change: 'భాష మార్చు',
+    label: 'భాష',
   },
   home: {
     selectLocation: 'స్థానాన్ని ఎంచుకోండి',

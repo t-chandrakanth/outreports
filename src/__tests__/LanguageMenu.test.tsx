@@ -16,6 +16,11 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe('LanguageMenu', () => {
+  it('shows a visible caption under the icon', () => {
+    render(<LanguageMenu />);
+    expect(screen.getByRole('button', { name: 'Change language' }).textContent).toBe('Language');
+  });
+
   it('lists every language in its own script and marks the current one', () => {
     render(<LanguageMenu />);
     fireEvent.click(screen.getByRole('button', { name: 'Change language' }));

@@ -131,7 +131,8 @@ export function InstallGuide({ open, onClose }: Props) {
           </ol>
         )}
 
-        {platform !== 'ios' && !canPrompt && (
+        {/* Shown even when the native prompt is available: people dismiss or miss that prompt. */}
+        {platform !== 'ios' && (
           <ol className="install-steps">
             <li>
               <MenuIcon />

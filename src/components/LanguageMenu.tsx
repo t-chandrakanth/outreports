@@ -4,13 +4,17 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
 import CheckIcon from '@mui/icons-material/Check';
 import LanguageIcon from '@mui/icons-material/Language';
 import { useTranslation } from 'react-i18next';
 import { currentLanguage, LANGUAGES, setLanguage, type LanguageCode } from '../i18n';
 import { useBackClose } from '../nav/NavContext';
 
-/** App-bar language switcher. Each option is labelled in its own script. */
+/**
+ * App-bar language switcher: globe icon with a visible caption so it is
+ * recognisable. Each option is labelled in its own script.
+ */
 export function LanguageMenu() {
   const { t } = useTranslation();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -34,8 +38,12 @@ export function LanguageMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{ flexDirection: 'column', gap: 0.25, px: 1, py: 0.5, borderRadius: 2 }}
       >
-        <LanguageIcon />
+        <LanguageIcon fontSize="small" />
+        <Typography component="span" sx={{ fontSize: '0.65rem', lineHeight: 1, fontWeight: 600 }}>
+          {t('language.label')}
+        </Typography>
       </IconButton>
       <Menu
         anchorEl={anchor}

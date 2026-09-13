@@ -24,6 +24,7 @@ export const en = {
   },
   language: {
     change: 'Change language',
+    label: 'Language',
   },
   home: {
     selectLocation: 'Select location',

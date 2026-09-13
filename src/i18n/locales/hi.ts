@@ -19,6 +19,7 @@ export const hi: Dictionary = {
   },
   language: {
     change: 'भाषा बदलें',
+    label: 'भाषा',
   },
   home: {
     selectLocation: 'स्थान चुनें',
