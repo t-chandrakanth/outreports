@@ -1,4 +1,4 @@
-# SCR TMR'S OUTREPORTS
+# SCR Out Reports
 
 Mobile data-entry app for South Central Railway train managers (TMRs) to
 record train outreports into a shared Google Sheet.

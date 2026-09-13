@@ -16,6 +16,8 @@ interface Props {
   actions?: ReactNode;
   /** rendered inside the app bar, below the toolbar (e.g. Tabs) */
   bar?: ReactNode;
+  /** show the app emblem at the start of the bar (home screen) */
+  logo?: boolean;
   /**
    * true (default): children go in a scrollable centered main column.
    * false: children own the remaining height (forms/lists with their own
@@ -29,7 +31,7 @@ interface Props {
  * Mobile page scaffold: station name-board app bar (back arrow on every
  * pushed screen, language menu on every screen) over a flex column body.
  */
-export function Screen({ title, subtitle, actions, bar, scroll = true, children }: Props) {
+export function Screen({ title, subtitle, actions, bar, logo = false, scroll = true, children }: Props) {
   const nav = useNav();
   const { t } = useTranslation();
   const entry = useContext(ScreenEntryContext);
@@ -53,6 +55,15 @@ export function Screen({ title, subtitle, actions, bar, scroll = true, children 
                 <ArrowBackIcon />
               </IconButton>
             )}
+            {logo && !showBack && (
+              <Box
+                component="img"
+                src="/icons/icon-192.png"
+                alt=""
+                aria-hidden
+                sx={{ width: 40, height: 40, borderRadius: '19%', flex: 'none' }}
+              />
+            )}
             <Box sx={{ flex: 1, minWidth: 0, textAlign: 'center', px: 0.5 }}>
               <Typography variant="h6" noWrap component="h1" sx={{ fontSize: '1.1rem', lineHeight: 1.25 }}>
                 {title}
@@ -74,7 +85,7 @@ export function Screen({ title, subtitle, actions, bar, scroll = true, children 
                 </Typography>
               )}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: showBack ? 40 : 0, justifyContent: 'flex-end', gap: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: showBack || logo ? 40 : 0, justifyContent: 'flex-end', gap: 0.5 }}>
               {actions}
               <LanguageMenu />
             </Box>

@@ -152,7 +152,7 @@ export const en = {
   },
   install: {
     sheetLabel: 'Install this app',
-    title: 'Keep OUTREPORTS on your phone',
+    title: 'Keep SCR Out Reports on your phone',
     body: 'Install it like an app — opens full screen from your home screen and keeps working when the network drops.',
     iosShare: 'In <b>Safari</b>, tap the <b>Share</b> button (bottom of the screen)',
     iosAdd: 'Scroll down and tap <b>Add to Home Screen</b>',
@@ -165,7 +165,7 @@ export const en = {
     notNow: 'Not now',
     installApp: 'Install app',
     gotIt: 'Got it',
-    installed: 'Installed — find OUTREPORTS on your home screen',
+    installed: 'Installed — find SCR Out Reports on your home screen',
   },
   errors: {
     BAD_JSON: 'The app sent a request the server could not read',

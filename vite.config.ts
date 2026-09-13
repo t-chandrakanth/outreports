@@ -25,10 +25,10 @@ export default defineConfig(({ mode }) => {
     react(),
     VitePWA({
       registerType: 'prompt', // src/pwa.ts applies updates, deferring while a form is dirty
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'icons/apple-touch-icon.png', 'splash/splash.webp'],
       manifest: {
-        name: "SCR TMR'S OUTREPORTS",
-        short_name: 'OUTREPORTS',
+        name: 'SCR Out Reports',
+        short_name: 'Out Reports',
         description: 'South Central Railway train outreport entry',
         theme_color: '#2C7A7B',
         background_color: '#F7FAFC',
@@ -42,7 +42,10 @@ export default defineConfig(({ mode }) => {
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,woff2}'],
+        // One startup image per iOS device; Safari fetches only the matching
+        // one, so keep the whole set out of the precache.
+        globIgnores: ['**/splash/ios/**'],
         navigateFallback: '/index.html',
         clientsClaim: true,
         // The Apps Script API is never HTTP-cached: responses arrive via

@@ -1,4 +1,4 @@
-# SCR TMR'S OUTREPORTS — PWA
+# SCR Out Reports — PWA
 
 Mobile-first, installable, offline-capable web app for South Central Railway
 TMR outreport entry. Data lives in the existing shared Google Spreadsheet;
@@ -65,6 +65,31 @@ npm run build && npm run preview   # production build + local preview
 `node scripts/mock-apps-script.mjs` starts a local mock of the Apps Script
 transport (port 8787, delete PIN `1234`) for testing without touching the
 real sheet: build with `VITE_APPS_SCRIPT_URL=http://localhost:8787/exec`.
+
+## Icons & splash
+
+The brand sources live in `assets/`: `LOGO.png` (train emblem over the
+wordmark, transparent) and `Splshscreen.png` (the splash photo). Everything
+the phone shows is rendered from those two files:
+
+```bash
+npm run icons   # after replacing either source file
+```
+
+- `public/favicon.png`, `public/icons/icon-192.png`, `icon-512.png` — the
+  emblem (the logo with the wordmark cropped off) on a white rounded square.
+  `maskable-512.png` keeps the emblem inside Android's 80% safe zone;
+  `apple-touch-icon.png` is full-bleed because iOS rounds it itself.
+  The same `icon-192.png` is the badge next to the title on the home screen.
+- `public/splash/splash.webp` — the in-app splash. `index.html` paints it
+  full-screen before any JavaScript loads and `src/splash.ts` fades it out
+  after the first render (never sooner than 600 ms after page start).
+- `public/splash/ios/*.png` — one `apple-touch-startup-image` per iPhone/iPad
+  size, referenced from `index.html` with a device media query (the script
+  prints that block). Only the installed home-screen app shows these. They
+  are excluded from the service-worker precache; Safari fetches just the one
+  it needs. Android builds its own splash from the manifest icon and
+  `background_color`, so nothing custom is possible there.
 
 ## Deploying to Vercel
 

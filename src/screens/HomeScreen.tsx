@@ -25,7 +25,7 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
   }
 
   return (
-    <Screen title="SCR TMR'S OUTREPORTS" subtitle={t('app.subtitle')} actions={<SyncBadge />}>
+    <Screen logo title="SCR Out Reports" subtitle={t('app.subtitle')} actions={<SyncBadge />}>
       <Typography variant="subtitle2" component="p" sx={{ color: 'text.secondary', mb: 1.5 }}>
         {t('home.selectLocation')}
       </Typography>

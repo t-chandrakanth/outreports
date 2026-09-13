@@ -147,7 +147,7 @@ export const hi: Dictionary = {
   },
   install: {
     sheetLabel: 'यह ऐप इंस्टॉल करें',
-    title: 'OUTREPORTS को अपने फ़ोन पर रखें',
+    title: 'SCR Out Reports को अपने फ़ोन पर रखें',
     body: 'इसे ऐप की तरह इंस्टॉल करें — होम स्क्रीन से पूरी स्क्रीन पर खुलता है और नेटवर्क जाने पर भी काम करता रहता है।',
     iosShare: '<b>Safari</b> में <b>Share</b> बटन (स्क्रीन के नीचे) पर टैप करें',
     iosAdd: 'नीचे स्क्रॉल करें और <b>Add to Home Screen</b> पर टैप करें',
@@ -160,7 +160,7 @@ export const hi: Dictionary = {
     notNow: 'अभी नहीं',
     installApp: 'ऐप इंस्टॉल करें',
     gotIt: 'ठीक है',
-    installed: 'इंस्टॉल हो गया — होम स्क्रीन पर OUTREPORTS देखें',
+    installed: 'इंस्टॉल हो गया — होम स्क्रीन पर SCR Out Reports देखें',
   },
   errors: {
     BAD_JSON: 'ऐप ने ऐसा अनुरोध भेजा जिसे सर्वर पढ़ नहीं सका',

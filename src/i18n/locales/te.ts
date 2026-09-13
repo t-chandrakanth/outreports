@@ -147,7 +147,7 @@ export const te: Dictionary = {
   },
   install: {
     sheetLabel: 'ఈ యాప్‌ను ఇన్‌స్టాల్ చేయండి',
-    title: 'OUTREPORTSను మీ ఫోన్‌లో ఉంచుకోండి',
+    title: 'SCR Out Reportsను మీ ఫోన్‌లో ఉంచుకోండి',
     body: 'దీన్ని యాప్‌లా ఇన్‌స్టాల్ చేయండి — హోమ్ స్క్రీన్ నుండి పూర్తి స్క్రీన్‌లో తెరుచుకుంటుంది, నెట్‌వర్క్ పోయినా పని చేస్తుంది.',
     iosShare: '<b>Safari</b>లో <b>Share</b> బటన్ (స్క్రీన్ కింద) నొక్కండి',
     iosAdd: 'కిందకు స్క్రోల్ చేసి <b>Add to Home Screen</b> నొక్కండి',
@@ -160,7 +160,7 @@ export const te: Dictionary = {
     notNow: 'ఇప్పుడు కాదు',
     installApp: 'యాప్ ఇన్‌స్టాల్ చేయి',
     gotIt: 'సరే',
-    installed: 'ఇన్‌స్టాల్ అయింది — హోమ్ స్క్రీన్‌లో OUTREPORTS చూడండి',
+    installed: 'ఇన్‌స్టాల్ అయింది — హోమ్ స్క్రీన్‌లో SCR Out Reports చూడండి',
   },
   errors: {
     BAD_JSON: 'యాప్ పంపిన అభ్యర్థనను సర్వర్ చదవలేకపోయింది',

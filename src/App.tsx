@@ -10,10 +10,14 @@ import { DirectionScreen } from './screens/DirectionScreen';
 import { EditScreen } from './screens/EditScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SheetScreen } from './screens/SheetScreen';
+import { hideSplash } from './splash';
 
 export default function App() {
   const [installOpen, setInstallOpen] = useAutoInstallGuide();
   const { installed } = useInstallPrompt();
+
+  // The index.html splash overlay comes down once the first screen has painted.
+  useEffect(() => hideSplash(), []);
 
   // Flush the offline outbox whenever connectivity returns, plus a slow
   // periodic retry: 'online' does not fire when a flush failed while the
