@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
       includeAssets: ['favicon.png', 'icons/apple-touch-icon.png', 'splash/splash.webp'],
       manifest: {
         name: 'SCR Out Reports',
-        short_name: 'Out Reports',
+        short_name: 'SCR Out Reports',
         description: 'South Central Railway train outreport entry',
         theme_color: '#2C7A7B',
         background_color: '#F7FAFC',
