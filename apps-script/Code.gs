@@ -26,7 +26,16 @@ var ALLOWED_SHEETS = [
   'NZB-RDM UP',  'RDM-NZB DN',
   'RC-DN',       'HYB-DN',
   'SNF-KZJ',     'KZJ-SNF',
-  'BDCR-DKJ',    'DKJ-BDCR'
+  'BDCR-DKJ',    'DKJ-BDCR',
+  'VKB-BIDR-PRLI-LTRR'
+];
+
+// Header row written into a listed tab that is still completely empty (a
+// freshly created tab). Must match the other tabs and src/config.ts FIELDS.
+var HEADER_TEMPLATE = [
+  'DATE', 'TR.NO', 'LOCO NO', 'LOCO BASE AND DUE', 'LOAD', 'B.UP', 'BPC NO',
+  'RAKE-ID (IF-CC RAKE)', 'ISSUED AT', 'ISSUED ON', 'BP%', 'VALIDITY', 'VALID UPTO',
+  'EX', 'COMMODITY', 'COD', 'T/O TIME', 'TMR MOBILE NO'
 ];
 
 var ID_HEADER = '_ID';
@@ -132,7 +141,18 @@ function pinError() {
 /** Returns 1-based column index of _ID, creating the header if missing. */
 function ensureIdColumn(sheet) {
   var lastCol = sheet.getLastColumn();
-  if (lastCol === 0) throw new Error('Sheet has no header row');
+  if (lastCol === 0) {
+    // Brand-new tab with nothing in it: seed the standard header row so the
+    // first save works without anyone having to type the headers by hand.
+    if (sheet.getLastRow() !== 0) throw new Error('Sheet has no header row');
+    if (sheet.getMaxColumns() < HEADER_TEMPLATE.length) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), HEADER_TEMPLATE.length - sheet.getMaxColumns());
+    }
+    var headerRange = sheet.getRange(1, 1, 1, HEADER_TEMPLATE.length);
+    headerRange.setNumberFormat('@');
+    headerRange.setValues([HEADER_TEMPLATE]);
+    lastCol = HEADER_TEMPLATE.length;
+  }
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   for (var i = 0; i < headers.length; i++) {
     if (String(headers[i]).trim() === ID_HEADER) return i + 1;

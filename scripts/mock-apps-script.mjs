@@ -18,7 +18,7 @@ const HEADERS = ['DATE','TR.NO','LOCO NO','LOCO BASE AND DUE','LOAD','B.UP','BPC
   'COD','T/O TIME','TMR MOBILE NO'];
 const ALLOWED = ['SNF-WADI UP','WADI-SNF DN','MTMI-DKJ UP','MTMI-DKJ DN','BPA-BPQ UP',
   'BPQ-BPA DN','NZB-RDM UP','RDM-NZB DN','RC-DN','HYB-DN',
-  'SNF-KZJ','KZJ-SNF','BDCR-DKJ','DKJ-BDCR'];
+  'SNF-KZJ','KZJ-SNF','BDCR-DKJ','DKJ-BDCR','VKB-BIDR-PRLI-LTRR'];
 for (const s of ALLOWED) sheets.set(s, { rows: [] });
 // seed one legacy-style row
 sheets.get('SNF-WADI UP').rows.push({ id: crypto.randomUUID(), cells: ['08-09 21:15','KPCC','60426','KZJ 28/09','58/58/5200','','','','','','90','','','','','','',''] });

@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { FIELDS, LOCATIONS } from '../config';
 
 describe('LOCATIONS', () => {
-  it('ends with SNF and BDCR, each with its two sheet tabs', () => {
-    const codes = LOCATIONS.map((l) => l.code);
-    expect(codes.slice(-2)).toEqual(['SNF', 'BDCR']);
+  it('has SNF and BDCR, each with its two sheet tabs', () => {
     expect(LOCATIONS.find((l) => l.code === 'SNF')?.directions).toEqual(['SNF-KZJ', 'KZJ-SNF']);
     expect(LOCATIONS.find((l) => l.code === 'BDCR')?.directions).toEqual(['BDCR-DKJ', 'DKJ-BDCR']);
+  });
+
+  it('ends with VKB-BIDR-PRLI-LTRR as a single-sheet location (opens the form directly)', () => {
+    const last = LOCATIONS[LOCATIONS.length - 1];
+    expect(last.code).toBe('VKB-BIDR-PRLI-LTRR');
+    expect(last.directions).toEqual(['VKB-BIDR-PRLI-LTRR']);
   });
 
   it('keeps the existing six locations first', () => {

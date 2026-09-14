@@ -15,9 +15,18 @@ interface Props {
   onInstall: () => void;
 }
 
+/** Codes longer than this get a full-width card so the label never wraps. */
+const WIDE_CODE_LENGTH = 8;
+
 export function HomeScreen({ showInstallHint, onInstall }: Props) {
   const nav = useNav();
   const { t } = useTranslation();
+
+  /** Sheet name under the code; omitted when it would only repeat the code. */
+  function caption(loc: Location): string | null {
+    if (loc.directions.length > 1) return t('home.directions', { count: loc.directions.length });
+    return loc.directions[0] === loc.code ? null : loc.directions[0];
+  }
 
   function pick(loc: Location) {
     if (loc.directions.length === 1) nav.push({ name: 'sheet', sheet: loc.directions[0] });
@@ -35,7 +44,13 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
             key={loc.code}
             onClick={() => pick(loc)}
             focusRipple
-            sx={{ borderRadius: 2, textAlign: 'left', display: 'block' }}
+            sx={{
+              borderRadius: 2,
+              textAlign: 'left',
+              display: 'block',
+              // Long corridor codes (e.g. VKB-BIDR-PRLI-LTRR) do not fit a half-width card on a phone.
+              gridColumn: loc.code.length > WIDE_CODE_LENGTH ? '1 / -1' : 'auto',
+            }}
           >
             <Paper
               variant="outlined"
@@ -53,9 +68,11 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
               <Typography variant="h6" component="span" sx={{ lineHeight: 1.2 }}>
                 {loc.code}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {loc.directions.length === 1 ? loc.directions[0] : t('home.directions', { count: loc.directions.length })}
-              </Typography>
+              {caption(loc) && (
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {caption(loc)}
+                </Typography>
+              )}
             </Paper>
           </ButtonBase>
         ))}

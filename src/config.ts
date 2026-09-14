@@ -22,6 +22,7 @@ export const LOCATIONS: Location[] = [
   { code: 'HYB', directions: ['HYB-DN'] },
   { code: 'SNF', directions: ['SNF-KZJ', 'KZJ-SNF'] },
   { code: 'BDCR', directions: ['BDCR-DKJ', 'DKJ-BDCR'] },
+  { code: 'VKB-BIDR-PRLI-LTRR', directions: ['VKB-BIDR-PRLI-LTRR'] },
 ];
 
 export type FieldGroup = keyof Dictionary['groups'];
