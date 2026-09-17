@@ -26,26 +26,26 @@ var LEGACY_HTML_FILE = 'Index'; // <-- name of your HTML file WITHOUT .html
 // Tab names exactly as they appear in the workbook (one tab per direction).
 // "Sheet12" is a hand-made archive of old rows and is deliberately not listed.
 var ALLOWED_SHEETS = [
-  'SNF-WADICT UP', 'WADICT-SNF DN',
-  'DKJ-MTMIVNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI',
+  'SNF-WADI/CT UP', 'WADI/CT-SNF DN',
+  'DKJ-MTMI/VNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI',
   'BPA-BPQ UP', 'BPQ-BPA DN',
   'NZB-RDM UP', 'RDM-NZB DN',
-  'RC-WADICT DN', 'RC-CTWADI UP',
+  'RC-CT/WADI UP', 'RC-WADI/CT DN',
   'HYB-DN',
   'SNF-KZJ', 'KZJ-SNF', 'VNUP-PGDP-SNF',
   'BDCR-DKJ', 'DKJ-BDCR',
-  'VKB-BIDR-PRLILTRR', 'PRLILTRR-BIDR-VKB'
+  'VKB-BIDR-PRLI/LTRR', 'PRLI/LTRR-BIDR-VKB'
 ];
 
 // Former tab names -> current tab names. Installed app builds and entries
 // queued offline before a rename still send the old name; keep this in sync
 // with SHEET_ALIASES in src/config.ts.
 var SHEET_ALIASES = {
-  'SNF-WADI UP':        'SNF-WADICT UP',
-  'WADI-SNF DN':        'WADICT-SNF DN',
-  'MTMI-DKJ UP':        'DKJ-MTMIVNUP UP',
-  'RC-DN':              'RC-WADICT DN',
-  'VKB-BIDR-PRLI-LTRR': 'VKB-BIDR-PRLILTRR'
+  'SNF-WADI UP':        'SNF-WADI/CT UP',
+  'WADI-SNF DN':        'WADI/CT-SNF DN',
+  'MTMI-DKJ UP':        'DKJ-MTMI/VNUP UP',
+  'RC-DN':              'RC-WADI/CT DN',
+  'VKB-BIDR-PRLI-LTRR': 'VKB-BIDR-PRLI/LTRR'
 };
 
 // Header row written into a listed tab that is still completely empty (a
@@ -392,50 +392,48 @@ function apiList(sheet, limit) {
 }
 
 // ============ LEGACY FUNCTIONS (keep the OLD web app UI working) ============
-// The original Index.html calls these via google.script.run.
+// apps-script/Index.html calls these via google.script.run. They reuse the
+// JSON API actions so both UIs share validation, ids, locking and header
+// aliases. Sheet names go through resolveSheetName() inside getSheet().
 
+/** Legacy UI: create a record. Returns the API envelope ({ok, id} or {ok:false, message}). */
 function saveRecord(sheetName, record) {
-  var sheet = getSheet(sheetName);
-  var result = withLock(function () {
+  var sheet;
+  try {
+    sheet = getSheet(sheetName);
+  } catch (err) {
+    return { ok: false, error: 'BAD_SHEET', message: String(err.message || err) };
+  }
+  return withLock(function () {
     return apiSave(sheet, Utilities.getUuid(), record);
   });
-  if (!result.ok) throw new Error(result.message);
-  return true;
 }
 
-function getSheetData(sheetName) {
-  var sheet = getSheet(sheetName);
-
-  var lastRow = sheet.getLastRow();
-  var lastCol = sheet.getLastColumn();
-  var headerRow = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
-
-  var headers = [];
-  var dataColIdx = [];
-  for (var c = 0; c < headerRow.length; c++) {
-    if (String(headerRow[c]).trim() === ID_HEADER) continue; // hide _ID from old UI
-    headers.push(headerRow[c]);
-    dataColIdx.push(c);
+/** Legacy UI: update a record by _ID. Returns the API envelope. */
+function updateRecord(sheetName, id, record) {
+  var sheet;
+  try {
+    sheet = getSheet(sheetName);
+  } catch (err) {
+    return { ok: false, error: 'BAD_SHEET', message: String(err.message || err) };
   }
-
-  var data = [];
-  if (lastRow >= 2) {
-    var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
-    data = values.map(function (row) {
-      return dataColIdx.map(function (ci) { return row[ci]; });
-    });
-  }
-  return { headers: headers, data: data };
-}
-
-function deleteRecord(sheetName, rowNumber) {
-  var sheet = getSheet(sheetName);
-  var result = withLock(function () {
-    var n = Number(rowNumber);
-    if (!n || n < 2 || n > sheet.getLastRow()) throw new Error('Invalid row: ' + rowNumber);
-    sheet.deleteRow(n);
-    return { ok: true };
+  return withLock(function () {
+    return apiUpdate(sheet, id, record);
   });
-  if (!result.ok) throw new Error(result.message);
-  return true;
+}
+
+/**
+ * Legacy UI: list a tab. Same shape as the JSON API list action
+ * ({ok, headers, rows:[{id, cells}], total}), newest first, headers
+ * canonicalised, _ID hidden. Returns {ok:false, message} for a bad tab so the
+ * page can show the error instead of a generic script failure.
+ */
+function getSheetData(sheetName) {
+  var sheet;
+  try {
+    sheet = getSheet(sheetName);
+  } catch (err) {
+    return { ok: false, error: 'BAD_SHEET', message: String(err.message || err) };
+  }
+  return apiList(sheet, 100000);
 }

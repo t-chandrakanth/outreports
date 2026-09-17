@@ -170,7 +170,7 @@ describe('normalizeOutbox', () => {
     await enqueue('HYB-DN', 'id-2', { 'TR.NO': 'B' });
     await normalizeOutbox();
     const items = await getOutbox();
-    expect(items.map((it) => it.sheet)).toEqual(['RC-WADICT DN', 'HYB-DN']);
+    expect(items.map((it) => it.sheet)).toEqual(['RC-WADI/CT DN', 'HYB-DN']);
     expect(items[0].status).toBe('pending');
   });
 

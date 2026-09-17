@@ -67,18 +67,23 @@ Current tiles and tabs (one tab per direction):
 
 | Tile | Tabs |
 |---|---|
-| WADI | `SNF-WADICT UP`, `WADICT-SNF DN` |
-| MTMI | `DKJ-MTMIVNUP UP`, `MTMI-DKJ DN`, `VNUP-MTMI` |
+| WADI | `SNF-WADI/CT UP`, `WADI/CT-SNF DN` |
+| MTMI | `DKJ-MTMI/VNUP UP`, `MTMI-DKJ DN`, `VNUP-MTMI` |
 | BPQ | `BPA-BPQ UP`, `BPQ-BPA DN` |
 | NZB | `NZB-RDM UP`, `RDM-NZB DN` |
-| RC | `RC-WADICT DN`, `RC-CTWADI UP` |
+| RC | `RC-CT/WADI UP`, `RC-WADI/CT DN` |
 | HYB | `HYB-DN` |
 | SNF | `SNF-KZJ`, `KZJ-SNF`, `VNUP-PGDP-SNF` |
 | BDCR | `BDCR-DKJ`, `DKJ-BDCR` |
-| VKB-BIDR-PRLI-LTRR | `VKB-BIDR-PRLILTRR`, `PRLILTRR-BIDR-VKB` |
+| VKB-BIDR-PRLI-LTRR | `VKB-BIDR-PRLI/LTRR`, `PRLI/LTRR-BIDR-VKB` |
 
 `Sheet12` in the workbook is a hand-made archive of older rows and is
 deliberately not listed.
+
+The legacy Apps Script UI lives in `apps-script/Index.html` (paste it over the
+`Index` HTML file in the editor whenever the station list changes); it calls
+`saveRecord`, `updateRecord` and `getSheetData` in `Code.gs`, which share the
+JSON API's validation, ids and header aliases.
 
 ## Development
 

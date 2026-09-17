@@ -16,16 +16,16 @@ const sheets = new Map(); // name -> { headers, rows: [{id, cells}] }
 const HEADERS = ['DATE','TR.NO','LOCO NO','LOCO BASE AND DUE','LOAD','B.UP','BPC NO',
   'RAKE-ID (IF-CC RAKE)','ISSUED AT','ISSUED ON','BP%','VALIDITY','VALID UPTO','EX','COMMODITY',
   'COD','T/O TIME','TMR MOBILE NO'];
-const ALLOWED = ['SNF-WADICT UP','WADICT-SNF DN','DKJ-MTMIVNUP UP','MTMI-DKJ DN','VNUP-MTMI',
-  'BPA-BPQ UP','BPQ-BPA DN','NZB-RDM UP','RDM-NZB DN','RC-WADICT DN','RC-CTWADI UP','HYB-DN',
-  'SNF-KZJ','KZJ-SNF','VNUP-PGDP-SNF','BDCR-DKJ','DKJ-BDCR','VKB-BIDR-PRLILTRR','PRLILTRR-BIDR-VKB'];
+const ALLOWED = ['SNF-WADI/CT UP','WADI/CT-SNF DN','DKJ-MTMI/VNUP UP','MTMI-DKJ DN','VNUP-MTMI',
+  'BPA-BPQ UP','BPQ-BPA DN','NZB-RDM UP','RDM-NZB DN','RC-CT/WADI UP','RC-WADI/CT DN','HYB-DN',
+  'SNF-KZJ','KZJ-SNF','VNUP-PGDP-SNF','BDCR-DKJ','DKJ-BDCR','VKB-BIDR-PRLI/LTRR','PRLI/LTRR-BIDR-VKB'];
 // Keep both alias tables identical to apps-script/Code.gs and src/config.ts.
 const SHEET_ALIASES = {
-  'SNF-WADI UP': 'SNF-WADICT UP',
-  'WADI-SNF DN': 'WADICT-SNF DN',
-  'MTMI-DKJ UP': 'DKJ-MTMIVNUP UP',
-  'RC-DN': 'RC-WADICT DN',
-  'VKB-BIDR-PRLI-LTRR': 'VKB-BIDR-PRLILTRR',
+  'SNF-WADI UP': 'SNF-WADI/CT UP',
+  'WADI-SNF DN': 'WADI/CT-SNF DN',
+  'MTMI-DKJ UP': 'DKJ-MTMI/VNUP UP',
+  'RC-DN': 'RC-WADI/CT DN',
+  'VKB-BIDR-PRLI-LTRR': 'VKB-BIDR-PRLI/LTRR',
 };
 const HEADER_ALIASES = { 'RAKE-ID': 'RAKE-ID (IF-CC RAKE)' };
 const resolveSheetName = (name) => {
@@ -40,12 +40,12 @@ const canonicalHeader = (raw) => {
 for (const s of ALLOWED) sheets.set(s, { headers: [...HEADERS], rows: [] });
 // Real-sheet quirks: three tabs spell the rake-id header without its suffix,
 // and one tab has a stray blank header cell.
-for (const s of ['SNF-WADICT UP', 'RC-CTWADI UP', 'SNF-KZJ']) {
+for (const s of ['SNF-WADI/CT UP', 'RC-CT/WADI UP', 'SNF-KZJ']) {
   sheets.get(s).headers = HEADERS.map((h) => (h === 'RAKE-ID (IF-CC RAKE)' ? 'RAKE-ID' : h));
 }
 sheets.get('BPA-BPQ UP').headers.push('');
 // seed one legacy-style row (cells align with that tab's raw header row)
-sheets.get('SNF-WADICT UP').rows.push({ id: crypto.randomUUID(), cells: ['08-09 21:15','KPCC','60426','KZJ 28/09','58/58/5200','','','CC-1234','','','90','','','','','','',''] });
+sheets.get('SNF-WADI/CT UP').rows.push({ id: crypto.randomUUID(), cells: ['08-09 21:15','KPCC','60426','KZJ 28/09','58/58/5200','','','CC-1234','','','90','','','','','','',''] });
 
 const pending = new Map(); // token -> json string
 

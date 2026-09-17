@@ -4,15 +4,15 @@ import { FIELDS, HEADER_ALIASES, LOCATIONS, SHEET_ALIASES, canonicalHeader, cano
 describe('LOCATIONS', () => {
   it('lists every workbook tab under its home-screen tile, in order', () => {
     expect(LOCATIONS).toEqual([
-      { code: 'WADI', directions: ['SNF-WADICT UP', 'WADICT-SNF DN'] },
-      { code: 'MTMI', directions: ['DKJ-MTMIVNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI'] },
+      { code: 'WADI', directions: ['SNF-WADI/CT UP', 'WADI/CT-SNF DN'] },
+      { code: 'MTMI', directions: ['DKJ-MTMI/VNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI'] },
       { code: 'BPQ', directions: ['BPA-BPQ UP', 'BPQ-BPA DN'] },
       { code: 'NZB', directions: ['NZB-RDM UP', 'RDM-NZB DN'] },
-      { code: 'RC', directions: ['RC-WADICT DN', 'RC-CTWADI UP'] },
+      { code: 'RC', directions: ['RC-CT/WADI UP', 'RC-WADI/CT DN'] },
       { code: 'HYB', directions: ['HYB-DN'] },
       { code: 'SNF', directions: ['SNF-KZJ', 'KZJ-SNF', 'VNUP-PGDP-SNF'] },
       { code: 'BDCR', directions: ['BDCR-DKJ', 'DKJ-BDCR'] },
-      { code: 'VKB-BIDR-PRLI-LTRR', directions: ['VKB-BIDR-PRLILTRR', 'PRLILTRR-BIDR-VKB'] },
+      { code: 'VKB-BIDR-PRLI-LTRR', directions: ['VKB-BIDR-PRLI/LTRR', 'PRLI/LTRR-BIDR-VKB'] },
     ]);
   });
 
@@ -35,9 +35,9 @@ describe('sheet aliases', () => {
   });
 
   it('canonicalSheet resolves old names, trims, and passes current names through', () => {
-    expect(canonicalSheet('RC-DN')).toBe('RC-WADICT DN');
-    expect(canonicalSheet('VKB-BIDR-PRLI-LTRR')).toBe('VKB-BIDR-PRLILTRR');
-    expect(canonicalSheet(' RC-WADICT DN ')).toBe('RC-WADICT DN');
+    expect(canonicalSheet('RC-DN')).toBe('RC-WADI/CT DN');
+    expect(canonicalSheet('VKB-BIDR-PRLI-LTRR')).toBe('VKB-BIDR-PRLI/LTRR');
+    expect(canonicalSheet(' RC-WADI/CT DN ')).toBe('RC-WADI/CT DN');
     expect(canonicalSheet('HYB-DN')).toBe('HYB-DN');
     expect(canonicalSheet('Sheet12')).toBe('Sheet12');
   });

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCR TMR'S OUTREPORTS</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #eef2f7; color: #172033;
+    }
+    body { min-height: 100vh; }
+
+    /* HEADER */
+    .top-header {
+      background: linear-gradient(135deg, #0b3d91, #092b68);
+      color: white; padding: 18px 20px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-title { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+    .header-subtitle { font-size: 12px; margin-top: 5px; opacity: 0.9; }
+
+    /* MAIN */
+    .container { max-width: 1400px; margin: 0 auto; padding: 18px; }
+
+    /* STATION SELECTION */
+    .station-card, .report-card, .records-card {
+      background: white; border-radius: 12px; padding: 18px; margin-bottom: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .section-title { font-size: 17px; font-weight: 800; color: #0b3d91; margin-bottom: 14px; }
+    .station-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+    .station-btn {
+      border: none; border-radius: 8px; background: #e8edf5; color: #17345f;
+      padding: 12px 20px; font-size: 14px; font-weight: 800; cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .station-btn:hover { transform: translateY(-1px); background: #d8e3f4; }
+    .station-btn.active { background: #0b3d91; color: white; }
+
+    /* DIRECTIONS */
+    .direction-box { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e5eb; }
+    .direction-box.show { display: block; }
+    .direction-title { font-weight: 700; margin-bottom: 10px; }
+    .direction-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+    .direction-btn {
+      border: none; border-radius: 8px; padding: 11px 28px;
+      font-weight: 800; font-size: 14px; cursor: pointer;
+      background: #e9edf3; color: #1d2c42;
+    }
+    .direction-btn:hover { background: #d8e0ec; }
+    .direction-btn.active { background: #14833b; color: white; }
+
+    .selected-sheet {
+      margin-top: 15px; background: #f1f6ff; border-left: 5px solid #0b3d91;
+      padding: 11px 14px; font-size: 14px; font-weight: 700; display: none;
+    }
+    .selected-sheet.show { display: block; }
+
+    /* FORM */
+    .report-card { padding: 20px; margin-bottom: 20px; display: none; }
+    .report-card.show { display: block; }
+    .edit-banner {
+      display: none; margin-bottom: 12px; padding: 10px; background: #fff8e6;
+      border-left: 4px solid #f0a500; border-radius: 5px;
+      font-size: 13px; font-weight: 800; color: #7a5200;
+    }
+    .form-grid { display: flex; flex-direction: column; gap: 12px; }
+    .field { display: flex; flex-direction: column; width: 100%; }
+    .field label { font-size: 13px; font-weight: 800; margin-bottom: 5px; color: #27364d; }
+    .field input {
+      width: 100%; min-height: 44px; border: 1px solid #c9d2df; border-radius: 7px;
+      padding: 10px 12px; font-size: 15px; background: white; outline: none;
+    }
+    .field input:focus { border-color: #0b3d91; box-shadow: 0 0 0 2px rgba(11,61,145,0.10); }
+    .readonly { background: #f1f3f6 !important; color: #4b5563; }
+
+    /* BUTTONS */
+    .form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .btn { border: none; border-radius: 8px; padding: 12px 22px; font-size: 14px; font-weight: 800; cursor: pointer; }
+    .btn-primary { background: #0b3d91; color: white; }
+    .btn-primary:hover { background: #082e70; }
+    .btn-primary:disabled { opacity: 0.6; cursor: default; }
+    .btn-secondary { background: #e7ebf1; color: #27364d; }
+    .btn-secondary:hover { background: #d7dde6; }
+    .btn-edit {
+      background: #f0a500; color: white; padding: 7px 13px; border-radius: 6px;
+      font-size: 12px; font-weight: 800; border: none; cursor: pointer;
+    }
+    .btn-edit:hover { background: #d89000; }
+
+    /* SAVED RECORDS (horizontal table) */
+    .records-card { padding: 20px; }
+    .records-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .records-title { font-size: 17px; font-weight: 800; color: #0b3d91; }
+    .record-count { font-size: 12px; background: #edf2f8; padding: 6px 10px; border-radius: 20px; font-weight: 700; }
+    .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid #dce2ea; border-radius: 8px; }
+    table { border-collapse: collapse; width: max-content; min-width: 100%; }
+    th, td {
+      border-bottom: 1px solid #e1e5eb; border-right: 1px solid #e1e5eb;
+      padding: 9px 10px; font-size: 12px; text-align: left; white-space: nowrap; vertical-align: middle;
+    }
+    th { background: #0b3d91; color: white; font-weight: 800; position: sticky; top: 0; z-index: 2; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    tr:hover td { background: #eef5ff; }
+    .action-cell { position: sticky; left: 0; background: white !important; z-index: 3; min-width: 80px; }
+    th.action-cell { background: #092e6d !important; z-index: 4; }
+
+    /* STATUS */
+    .status { display: none; padding: 12px 14px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; font-weight: 700; }
+    .status.show { display: block; }
+    .status.info { background: #eaf3ff; color: #164a86; border-left: 4px solid #0b3d91; }
+    .status.success { background: #eaf8ef; color: #176b37; border-left: 4px solid #14833b; }
+    .status.error { background: #fff0f0; color: #a32020; border-left: 4px solid #c62828; }
+    .empty { text-align: center; padding: 30px 15px; color: #697586; font-size: 14px; }
+    .loader {
+      width: 18px; height: 18px; border: 3px solid #d7deea; border-top-color: #0b3d91;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+      display: inline-block; vertical-align: middle; margin-right: 7px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .container { padding: 10px; }
+      .top-header { padding: 15px; }
+      .header-title { font-size: 18px; }
+      .report-card, .records-card, .station-card { padding: 14px; border-radius: 9px; }
+      .station-buttons { display: grid; grid-template-columns: repeat(2, 1fr); }
+      .station-btn { width: 100%; }
+      .direction-btn { flex: 1; }
+      .form-actions { flex-direction: column; }
+      .form-actions .btn { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="top-header">
+    <div class="header-title">SCR TMR'S OUTREPORTS</div>
+    <div class="header-subtitle">TRAIN OUT REPORT MANAGEMENT SYSTEM</div>
+  </header>
+
+  <main class="container">
+    <div id="status" class="status"></div>
+
+    <!-- STATION SELECTION -->
+    <section class="station-card">
+      <div class="section-title">SELECT STATION</div>
+      <div id="stationButtons" class="station-buttons"></div>
+
+      <div id="directionBox" class="direction-box">
+        <div class="direction-title">SELECT DIRECTION</div>
+        <div id="directionButtons" class="direction-buttons"></div>
+      </div>
+
+      <div id="selectedSheet" class="selected-sheet"></div>
+    </section>
+
+    <!-- TRAIN OUT REPORT FORM -->
+    <section id="reportCard" class="report-card">
+      <div class="section-title">TRAIN OUT REPORT</div>
+      <div id="editModeText" class="edit-banner">EDITING EXISTING RECORD</div>
+
+      <form id="reportForm" onsubmit="submitForm(event)">
+        <div id="formGrid" class="form-grid"></div>
+        <div class="form-actions">
+          <button id="saveBtn" type="submit" class="btn btn-primary">SAVE REPORT</button>
+          <button id="cancelEditBtn" type="button" class="btn btn-secondary" style="display:none;" onclick="cancelEdit()">CANCEL EDIT</button>
+          <button type="button" class="btn btn-secondary" onclick="clearForm()">CLEAR</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- SAVED RECORDS -->
+    <section class="records-card">
+      <div class="records-header">
+        <div class="records-title">SAVED RECORDS</div>
+        <div id="recordCount" class="record-count">0 RECORDS</div>
+      </div>
+      <div id="recordsContainer">
+        <div class="empty">SELECT A STATION / DIRECTION TO LOAD RECORDS.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // =====================================================
+    // STATIONS -> SHEET TABS
+    // Tab names must match ALLOWED_SHEETS in Code.gs exactly.
+    // A station with one entry opens that tab directly.
+    // =====================================================
+    var STATIONS = [
+      { code: 'WADI', tabs: [{ label: 'UP', sheet: 'SNF-WADI/CT UP' }, { label: 'DN', sheet: 'WADI/CT-SNF DN' }] },
+      { code: 'MTMI', tabs: [{ label: 'UP', sheet: 'DKJ-MTMI/VNUP UP' }, { label: 'DN', sheet: 'MTMI-DKJ DN' }, { label: 'VNUP-MTMI', sheet: 'VNUP-MTMI' }] },
+      { code: 'BPQ',  tabs: [{ label: 'UP', sheet: 'BPA-BPQ UP' }, { label: 'DN', sheet: 'BPQ-BPA DN' }] },
+      { code: 'NZB',  tabs: [{ label: 'UP', sheet: 'NZB-RDM UP' }, { label: 'DN', sheet: 'RDM-NZB DN' }] },
+      { code: 'SNF',  tabs: [{ label: 'UP', sheet: 'SNF-KZJ' }, { label: 'DN', sheet: 'KZJ-SNF' }] },
+      { code: 'BDCR', tabs: [{ label: 'UP', sheet: 'BDCR-DKJ' }, { label: 'DN', sheet: 'DKJ-BDCR' }] },
+      { code: 'BIDR', tabs: [{ label: 'UP', sheet: 'VKB-BIDR-PRLI/LTRR' }, { label: 'DN', sheet: 'PRLI/LTRR-BIDR-VKB' }] },
+      { code: 'RC',   tabs: [{ label: 'UP', sheet: 'RC-CT/WADI UP' }, { label: 'DN', sheet: 'RC-WADI/CT DN' }] },
+      { code: 'HYB',  tabs: [{ label: 'HYB-DN', sheet: 'HYB-DN' }] },
+      { code: 'VNUP-PGDP-SNF', tabs: [{ label: 'VNUP-PGDP-SNF', sheet: 'VNUP-PGDP-SNF' }] }
+    ];
+
+    // =====================================================
+    // FORM FIELDS
+    // `header` is the record key: it must equal the canonical sheet header
+    // (Code.gs HEADER_TEMPLATE). Tabs whose header is spelled "RAKE-ID" are
+    // mapped by Code.gs HEADER_ALIASES, so the key here stays canonical.
+    // =====================================================
+    var FIELDS = [
+      { header: 'DATE', id: 'DATE', readOnly: true },
+      { header: 'TR.NO', id: 'TR_NO' },
+      { header: 'LOCO NO', id: 'LOCO_NO' },
+      { header: 'LOCO BASE AND DUE', id: 'LOCO_BASE_DUE' },
+      { header: 'LOAD', id: 'LOAD' },
+      { header: 'B.UP', id: 'B_UP' },
+      { header: 'BPC NO', id: 'BPC_NO' },
+      { header: 'RAKE-ID (IF-CC RAKE)', id: 'RAKE_ID', label: 'RAKE-ID (IF CC RAKE)' },
+      { header: 'ISSUED AT', id: 'ISSUED_AT' },
+      { header: 'ISSUED ON', id: 'ISSUED_ON' },
+      { header: 'BP%', id: 'BP_PERCENT' },
+      { header: 'VALIDITY', id: 'VALIDITY' },
+      { header: 'VALID UPTO', id: 'VALID_UPTO' },
+      { header: 'EX', id: 'EX' },
+      { header: 'COMMODITY', id: 'COMMODITY' },
+      { header: 'COD', id: 'COD' },
+      { header: 'T/O TIME', id: 'TO_TIME' },
+      { header: 'TMR MOBILE NO', id: 'TMR_MOBILE', tel: true }
+    ];
+
+    // =====================================================
+    // STATE
+    // =====================================================
+    var selectedStation = null;
+    var selectedSheet = '';
+    var editingId = '';
+    var currentHeaders = [];
+    var currentRecords = [];
+
+    document.addEventListener('DOMContentLoaded', function () {
+      renderStations();
+      renderForm();
+      setCurrentDateTime();
+    });
+
+    // =====================================================
+    // RENDERING
+    // =====================================================
+    function renderStations() {
+      var box = document.getElementById('stationButtons');
+      box.innerHTML = STATIONS.map(function (st) {
+        return '<button type="button" class="station-btn" data-station="' + escapeHtml(st.code) + '" ' +
+          'onclick="selectStation(\'' + escapeJs(st.code) + '\')">' + escapeHtml(st.code) + '</button>';
+      }).join('');
+    }
+
+    function renderForm() {
+      var grid = document.getElementById('formGrid');
+      grid.innerHTML = FIELDS.map(function (f) {
+        var attrs = 'type="' + (f.tel ? 'tel' : 'text') + '" id="' + f.id + '" autocomplete="off"';
+        if (f.readOnly) attrs += ' class="readonly" readonly';
+        if (f.tel) attrs += ' maxlength="10" inputmode="numeric"';
+        return '<div class="field"><label for="' + f.id + '">' + escapeHtml(f.label || f.header) + '</label>' +
+          '<input ' + attrs + '></div>';
+      }).join('');
+    }
+
+    function renderDirections(station) {
+      var box = document.getElementById('directionButtons');
+      box.innerHTML = station.tabs.map(function (t) {
+        return '<button type="button" class="direction-btn" data-sheet="' + escapeHtml(t.sheet) + '" ' +
+          'onclick="selectSheet(\'' + escapeJs(t.sheet) + '\')">' + escapeHtml(t.label) + '</button>';
+      }).join('');
+    }
+
+    // =====================================================
+    // DATE + TIME (dd/mm/yyyy HH:mm, same as the PWA)
+    // =====================================================
+    function setCurrentDateTime() {
+      var now = new Date();
+      var pad = function (n) { return String(n).padStart(2, '0'); };
+      document.getElementById('DATE').value =
+        pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear() +
+        ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+
+    // =====================================================
+    // SELECTION
+    // =====================================================
+    function selectStation(code) {
+      selectedStation = STATIONS.filter(function (s) { return s.code === code; })[0];
+      if (!selectedStation) return;
+      selectedSheet = '';
+      editingId = '';
+
+      document.querySelectorAll('.station-btn').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.station === code);
+      });
+
+      var directionBox = document.getElementById('directionBox');
+      document.getElementById('selectedSheet').classList.remove('show');
+      hideReportArea();
+
+      if (selectedStation.tabs.length === 1) {
+        directionBox.classList.remove('show');
+        selectSheet(selectedStation.tabs[0].sheet);
+        return;
+      }
+      renderDirections(selectedStation);
+      directionBox.classList.add('show');
+    }
+
+    function selectSheet(sheet) {
+      selectedSheet = sheet;
+      editingId = '';
+      document.querySelectorAll('.direction-btn').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.sheet === sheet);
+      });
+      var box = document.getElementById('selectedSheet');
+      box.textContent = 'SELECTED: ' + sheet;
+      box.classList.add('show');
+      clearForm();
+      showReportArea();
+      loadRecords();
+    }
+
+    function showReportArea() { document.getElementById('reportCard').classList.add('show'); }
+    function hideReportArea() { document.getElementById('reportCard').classList.remove('show'); }
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+    function showStatus(message, type) {
+      var el = document.getElementById('status');
+      el.className = 'status show ' + (type || 'info');
+      el.innerHTML = message;
+    }
+    function hideStatus() { document.getElementById('status').className = 'status'; }
+
+    // =====================================================
+    // LOAD + DISPLAY RECORDS
+    // getSheetData returns {ok, headers, rows:[{id, cells}], total}
+    // =====================================================
+    function loadRecords() {
+      if (!selectedSheet) return;
+      showStatus('<span class="loader"></span> LOADING RECORDS...', 'info');
+      google.script.run
+        .withSuccessHandler(function (result) {
+          if (!result || result.ok === false) {
+            showStatus('ERROR LOADING RECORDS: ' + escapeHtml(result && result.message ? result.message : 'Unknown error'), 'error');
+            return;
+          }
+          currentHeaders = result.headers || [];
+          currentRecords = result.rows || [];
+          displayRecords();
+          hideStatus();
+        })
+        .withFailureHandler(function (error) {
+          showStatus('ERROR LOADING RECORDS: ' + escapeHtml(error.message || error), 'error');
+        })
+        .getSheetData(selectedSheet);
+    }
+
+    function displayRecords() {
+      var container = document.getElementById('recordsContainer');
+      var count = document.getElementById('recordCount');
+      var rows = currentRecords;
+      count.textContent = rows.length + (rows.length === 1 ? ' RECORD' : ' RECORDS');
+
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="empty">NO SAVED RECORDS FOUND.</div>';
+        return;
+      }
+
+      var html = '<div class="table-wrapper"><table><thead><tr><th class="action-cell">ACTION</th>';
+      currentHeaders.forEach(function (h) { html += '<th>' + escapeHtml(h) + '</th>'; });
+      html += '</tr></thead><tbody>';
+      rows.forEach(function (item) {
+        html += '<tr><td class="action-cell">';
+        if (item.id) {
+          html += '<button type="button" class="btn-edit" onclick="editRecordById(\'' + escapeJs(item.id) + '\')">EDIT</button>';
+        }
+        html += '</td>';
+        (item.cells || []).forEach(function (cell) { html += '<td>' + escapeHtml(cell) + '</td>'; });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    // =====================================================
+    // EDIT
+    // =====================================================
+    function findRecordById(id) {
+      var item = null;
+      for (var i = 0; i < currentRecords.length; i++) {
+        if (String(currentRecords[i].id) === String(id)) { item = currentRecords[i]; break; }
+      }
+      if (!item) return null;
+      var record = {};
+      currentHeaders.forEach(function (h, i) { record[h] = item.cells[i] || ''; });
+      return record;
+    }
+
+    function editRecordById(id) {
+      var record = id && findRecordById(id);
+      if (!record) {
+        showStatus('RECORD NOT FOUND. PLEASE RELOAD RECORDS.', 'error');
+        return;
+      }
+      editingId = id;
+      FIELDS.forEach(function (f) { setField(f.id, record[f.header]); });
+
+      document.getElementById('editModeText').style.display = 'block';
+      document.getElementById('saveBtn').textContent = 'UPDATE REPORT';
+      document.getElementById('cancelEditBtn').style.display = 'inline-block';
+      document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      showStatus('EDIT MODE: UPDATE THE REQUIRED FIELDS AND PRESS UPDATE REPORT.', 'info');
+    }
+
+    // =====================================================
+    // SUBMIT (save or update)
+    // =====================================================
+    function submitForm(event) {
+      event.preventDefault();
+      if (!selectedSheet) {
+        showStatus('PLEASE SELECT STATION AND DIRECTION FIRST.', 'error');
+        return;
+      }
+      var record = collectForm();
+
+      if (!String(record['TR.NO'] || '').trim()) {
+        showStatus('PLEASE ENTER TR.NO.', 'error');
+        document.getElementById('TR_NO').focus();
+        return;
+      }
+      var mobile = String(record['TMR MOBILE NO'] || '').trim();
+      if (mobile !== '' && !/^[0-9]{10}$/.test(mobile)) {
+        showStatus('TMR MOBILE NO MUST BE 10 DIGITS.', 'error');
+        return;
+      }
+
+      var button = document.getElementById('saveBtn');
+      button.disabled = true;
+      var updating = !!editingId;
+      showStatus('<span class="loader"></span> ' + (updating ? 'UPDATING RECORD...' : 'SAVING REPORT...'), 'info');
+
+      var runner = google.script.run
+        .withSuccessHandler(function (result) {
+          button.disabled = false;
+          if (!result || result.ok === false) {
+            showStatus((updating ? 'UPDATE FAILED: ' : 'SAVE FAILED: ') +
+              escapeHtml(result && result.message ? result.message : 'Unknown error'), 'error');
+            return;
+          }
+          showStatus(updating ? 'RECORD UPDATED SUCCESSFULLY.' : 'REPORT SAVED SUCCESSFULLY.', 'success');
+          clearForm();
+          loadRecords();
+        })
+        .withFailureHandler(function (error) {
+          button.disabled = false;
+          showStatus((updating ? 'UPDATE ERROR: ' : 'SAVE ERROR: ') + escapeHtml(error.message || error), 'error');
+        });
+
+      if (updating) runner.updateRecord(selectedSheet, editingId, record);
+      else runner.saveRecord(selectedSheet, record);
+    }
+
+    // =====================================================
+    // FORM HELPERS
+    // =====================================================
+    function collectForm() {
+      var record = {};
+      FIELDS.forEach(function (f) {
+        var el = document.getElementById(f.id);
+        record[f.header] = el ? el.value : '';
+      });
+      return record;
+    }
+
+    function setField(elementId, value) {
+      var el = document.getElementById(elementId);
+      if (el) el.value = value == null ? '' : value;
+    }
+
+    function clearForm() {
+      document.getElementById('reportForm').reset();
+      editingId = '';
+      setCurrentDateTime();
+      document.getElementById('editModeText').style.display = 'none';
+      document.getElementById('saveBtn').textContent = 'SAVE REPORT';
+      document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+    function cancelEdit() {
+      clearForm();
+      showStatus('EDIT CANCELLED.', 'info');
+    }
+
+    // =====================================================
+    // ESCAPING
+    // =====================================================
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function escapeJs(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')
+        .replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+    }
+  </script>
+</body>
+</html>
