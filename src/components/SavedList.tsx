@@ -20,8 +20,9 @@ import { apiErrorMessage } from '../i18n/errors';
 import { useBackClose } from '../nav/NavContext';
 import { readListCache, writeListCache } from '../offline/listCache';
 import { removeQueued } from '../offline/outbox';
-import type { CachedList, ListRow, OutreportRecord } from '../types';
+import type { CachedList } from '../types';
 import { isSameDay, formatTime } from '../utils/date';
+import { rowToRecord } from '../utils/records';
 import { forgetPin, rememberPin } from '../utils/pin';
 import { PinDialog } from './PinDialog';
 import { RecordCard, type CardEntry } from './RecordCard';
@@ -32,14 +33,6 @@ interface Props {
   /** bump to refetch (e.g. after an online save) */
   refreshToken: number;
   onEdit: (entry: CardEntry) => void;
-}
-
-function rowToRecord(headers: string[], row: ListRow): OutreportRecord {
-  const rec: OutreportRecord = {};
-  headers.forEach((h, i) => {
-    rec[h] = row.cells[i] ?? '';
-  });
-  return rec;
 }
 
 export function SavedList({ sheet, refreshToken, onEdit }: Props) {

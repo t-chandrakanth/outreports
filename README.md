@@ -20,7 +20,10 @@ Phone / desktop browser
 - **Row identity**: every row gets a UUID in the `_ID` column (auto-created,
   auto-backfilled). Edits and deletes address rows by id — safe with
   concurrent users. **Do not rename sheet column headers or delete the `_ID`
-  column.**
+  column.** If a tab's header is spelled differently (today: `RAKE-ID` on a
+  few tabs instead of `RAKE-ID (IF-CC RAKE)`), add the spelling to
+  `HEADER_ALIASES` in both `apps-script/Code.gs` and `src/config.ts` rather
+  than editing the sheet; the API returns canonical headers either way.
 - **Delete PIN**: deletes are validated server-side against the
   `DELETE_PIN` Script Property.
 - The old Apps Script web app UI keeps working at its original URL.
@@ -42,7 +45,7 @@ Phone / desktop browser
    Never use “New deployment” — that creates a *different* URL.
 6. In the same dialog confirm: Execute as **Me**, Who has access **Anyone**
    (plain “Anyone”, not “Anyone with Google account”).
-7. Test: open `<EXEC_URL>?action=ping` → should show `{"ok":true,"version":1}`.
+7. Test: open `<EXEC_URL>?action=ping` → should show `{"ok":true,"version":3}`.
 
 To change the PIN later: edit the `DELETE_PIN` Script Property (no redeploy
 needed).
@@ -53,6 +56,29 @@ use the same header row as the others), add its name to `ALLOWED_SHEETS` in
 `apps-script/Code.gs`, redeploy (step 5), then add it to `LOCATIONS` in
 `src/config.ts`. Deploy the backend first — the app rejects saves to tabs the
 backend does not list.
+
+To rename a tab: rename it in the sheet, update `ALLOWED_SHEETS` and
+`LOCATIONS`, and add `old name → new name` to `SHEET_ALIASES` in
+`apps-script/Code.gs`, `src/config.ts` and `scripts/mock-apps-script.mjs`.
+Installed apps and offline-queued entries keep sending the old name until they
+update, and the alias keeps them working.
+
+Current tiles and tabs (one tab per direction):
+
+| Tile | Tabs |
+|---|---|
+| WADI | `SNF-WADICT UP`, `WADICT-SNF DN` |
+| MTMI | `DKJ-MTMIVNUP UP`, `MTMI-DKJ DN`, `VNUP-MTMI` |
+| BPQ | `BPA-BPQ UP`, `BPQ-BPA DN` |
+| NZB | `NZB-RDM UP`, `RDM-NZB DN` |
+| RC | `RC-WADICT DN`, `RC-CTWADI UP` |
+| HYB | `HYB-DN` |
+| SNF | `SNF-KZJ`, `KZJ-SNF`, `VNUP-PGDP-SNF` |
+| BDCR | `BDCR-DKJ`, `DKJ-BDCR` |
+| VKB-BIDR-PRLI-LTRR | `VKB-BIDR-PRLILTRR`, `PRLILTRR-BIDR-VKB` |
+
+`Sheet12` in the workbook is a hand-made archive of older rows and is
+deliberately not listed.
 
 ## Development
 

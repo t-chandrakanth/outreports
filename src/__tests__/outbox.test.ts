@@ -18,7 +18,7 @@ vi.mock('../analytics', () => ({ trackEvent: vi.fn() }));
 import { clear } from 'idb-keyval';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
 import { trackEvent } from '../analytics';
-import { enqueue, flushOutbox, getOutbox, removeQueued, updateQueued } from '../offline/outbox';
+import { enqueue, flushOutbox, getOutbox, normalizeOutbox, removeQueued, updateQueued } from '../offline/outbox';
 
 const mockSave = vi.mocked(saveOutreport);
 const mockUpdate = vi.mocked(updateOutreport);
@@ -161,5 +161,23 @@ describe('outbox flush analytics', () => {
     await enqueue('RC-DN', 'id-b', { 'TR.NO': 'B' });
     await flushOutbox();
     expect(trackEvent).toHaveBeenCalledWith('queue_failed', { failed: 1, stopped: false });
+  });
+});
+
+describe('normalizeOutbox', () => {
+  it('moves items queued under a renamed sheet tab to the current name', async () => {
+    await enqueue('RC-DN', 'id-1', { 'TR.NO': 'A' });
+    await enqueue('HYB-DN', 'id-2', { 'TR.NO': 'B' });
+    await normalizeOutbox();
+    const items = await getOutbox();
+    expect(items.map((it) => it.sheet)).toEqual(['RC-WADICT DN', 'HYB-DN']);
+    expect(items[0].status).toBe('pending');
+  });
+
+  it('leaves an already-current queue untouched', async () => {
+    await enqueue('HYB-DN', 'id-1', { 'TR.NO': 'A' });
+    const before = await getOutbox();
+    await normalizeOutbox();
+    expect(await getOutbox()).toEqual(before);
   });
 });

@@ -14,16 +14,49 @@ export interface Location {
 }
 
 export const LOCATIONS: Location[] = [
-  { code: 'WADI', directions: ['SNF-WADI UP', 'WADI-SNF DN'] },
-  { code: 'MTMI', directions: ['MTMI-DKJ UP', 'MTMI-DKJ DN'] },
+  { code: 'WADI', directions: ['SNF-WADICT UP', 'WADICT-SNF DN'] },
+  { code: 'MTMI', directions: ['DKJ-MTMIVNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI'] },
   { code: 'BPQ', directions: ['BPA-BPQ UP', 'BPQ-BPA DN'] },
   { code: 'NZB', directions: ['NZB-RDM UP', 'RDM-NZB DN'] },
-  { code: 'RC', directions: ['RC-DN'] },
+  { code: 'RC', directions: ['RC-WADICT DN', 'RC-CTWADI UP'] },
   { code: 'HYB', directions: ['HYB-DN'] },
-  { code: 'SNF', directions: ['SNF-KZJ', 'KZJ-SNF'] },
+  { code: 'SNF', directions: ['SNF-KZJ', 'KZJ-SNF', 'VNUP-PGDP-SNF'] },
   { code: 'BDCR', directions: ['BDCR-DKJ', 'DKJ-BDCR'] },
-  { code: 'VKB-BIDR-PRLI-LTRR', directions: ['VKB-BIDR-PRLI-LTRR'] },
+  { code: 'VKB-BIDR-PRLI-LTRR', directions: ['VKB-BIDR-PRLILTRR', 'PRLILTRR-BIDR-VKB'] },
 ];
+
+/**
+ * Former tab names -> current tab names. Entries queued offline (and older
+ * installed builds) may still carry the old name. Keep in sync with
+ * SHEET_ALIASES in apps-script/Code.gs and scripts/mock-apps-script.mjs.
+ */
+export const SHEET_ALIASES: Readonly<Record<string, string>> = {
+  'SNF-WADI UP': 'SNF-WADICT UP',
+  'WADI-SNF DN': 'WADICT-SNF DN',
+  'MTMI-DKJ UP': 'DKJ-MTMIVNUP UP',
+  'RC-DN': 'RC-WADICT DN',
+  'VKB-BIDR-PRLI-LTRR': 'VKB-BIDR-PRLILTRR',
+};
+
+/** Old or current tab name -> current tab name (trimmed). */
+export function canonicalSheet(name: string): string {
+  const n = String(name ?? '').trim();
+  return Object.prototype.hasOwnProperty.call(SHEET_ALIASES, n) ? SHEET_ALIASES[n] : n;
+}
+
+/**
+ * Column headers spelled differently on some tabs -> the FIELDS header (the
+ * record key). Keep in sync with HEADER_ALIASES in apps-script/Code.gs.
+ */
+export const HEADER_ALIASES: Readonly<Record<string, string>> = {
+  'RAKE-ID': 'RAKE-ID (IF-CC RAKE)',
+};
+
+/** Raw header (server or cached) -> canonical record key; '' stays ''. */
+export function canonicalHeader(raw: string): string {
+  const h = String(raw ?? '').trim();
+  return Object.prototype.hasOwnProperty.call(HEADER_ALIASES, h) ? HEADER_ALIASES[h] : h;
+}
 
 export type FieldGroup = keyof Dictionary['groups'];
 export type FieldKey = keyof Dictionary['fields'];

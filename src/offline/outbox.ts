@@ -20,6 +20,7 @@
 import { trackEvent } from '../analytics';
 import { get, update } from 'idb-keyval';
 import { ApiError, NetworkError, saveOutreport, updateOutreport } from '../api/client';
+import { canonicalSheet } from '../config';
 import type { OutreportRecord, QueueItem } from '../types';
 
 const KEY = 'outbox:v1';
@@ -42,19 +43,27 @@ export async function getOutbox(): Promise<QueueItem[]> {
 }
 
 /**
- * Items persisted as 'syncing' by a flush that never finished (app killed
- * mid-request) must not stay locked forever: reset them to 'pending'.
- * Called on app start, before any flush.
+ * Repairs the queue on app start, before any flush:
+ * - Items persisted as 'syncing' by a flush that never finished (app killed
+ *   mid-request) must not stay locked forever: reset them to 'pending'.
+ * - Items queued under a since-renamed sheet tab are moved to the current
+ *   name, so they show up (and can be edited/removed) on that tab's screen.
  */
 export async function normalizeOutbox(): Promise<void> {
   let changed = false;
   await update<QueueItem[]>(KEY, (items) =>
     (items ?? []).map((it) => {
-      if (it.status === 'syncing') {
+      let next = it;
+      if (next.status === 'syncing') {
         changed = true;
-        return { ...it, status: 'pending' as const };
+        next = { ...next, status: 'pending' as const };
       }
-      return it;
+      const sheet = canonicalSheet(next.sheet);
+      if (sheet !== next.sheet) {
+        changed = true;
+        next = { ...next, sheet };
+      }
+      return next;
     }),
   );
   if (changed) await notify();

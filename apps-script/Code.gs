@@ -12,23 +12,41 @@
  *      -> Version: New version -> Deploy.   (NEVER "New deployment" — that
  *      would create a different URL.)
  *   4. Confirm: Execute as: Me / Who has access: Anyone (plain "Anyone").
- *   5. Test: open  <EXEC_URL>?action=ping  -> {"ok":true,"version":1}
+ *   5. Test: open  <EXEC_URL>?action=ping  -> {"ok":true,"version":3}
  */
 
 // ============ CONFIG ============
 
+// Keep the deployed web app bound to the intended workbook even if this code
+// is moved into a standalone Apps Script project.
+var SPREADSHEET_ID = '17d6RUscO9Jc4E53L1tP5D3b6VFRjlRkOull1FOFVz3M';
+
 var LEGACY_HTML_FILE = 'Index'; // <-- name of your HTML file WITHOUT .html
 
+// Tab names exactly as they appear in the workbook (one tab per direction).
+// "Sheet12" is a hand-made archive of old rows and is deliberately not listed.
 var ALLOWED_SHEETS = [
-  'SNF-WADI UP', 'WADI-SNF DN',
-  'MTMI-DKJ UP', 'MTMI-DKJ DN',
-  'BPA-BPQ UP',  'BPQ-BPA DN',
-  'NZB-RDM UP',  'RDM-NZB DN',
-  'RC-DN',       'HYB-DN',
-  'SNF-KZJ',     'KZJ-SNF',
-  'BDCR-DKJ',    'DKJ-BDCR',
-  'VKB-BIDR-PRLI-LTRR'
+  'SNF-WADICT UP', 'WADICT-SNF DN',
+  'DKJ-MTMIVNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI',
+  'BPA-BPQ UP', 'BPQ-BPA DN',
+  'NZB-RDM UP', 'RDM-NZB DN',
+  'RC-WADICT DN', 'RC-CTWADI UP',
+  'HYB-DN',
+  'SNF-KZJ', 'KZJ-SNF', 'VNUP-PGDP-SNF',
+  'BDCR-DKJ', 'DKJ-BDCR',
+  'VKB-BIDR-PRLILTRR', 'PRLILTRR-BIDR-VKB'
 ];
+
+// Former tab names -> current tab names. Installed app builds and entries
+// queued offline before a rename still send the old name; keep this in sync
+// with SHEET_ALIASES in src/config.ts.
+var SHEET_ALIASES = {
+  'SNF-WADI UP':        'SNF-WADICT UP',
+  'WADI-SNF DN':        'WADICT-SNF DN',
+  'MTMI-DKJ UP':        'DKJ-MTMIVNUP UP',
+  'RC-DN':              'RC-WADICT DN',
+  'VKB-BIDR-PRLI-LTRR': 'VKB-BIDR-PRLILTRR'
+};
 
 // Header row written into a listed tab that is still completely empty (a
 // freshly created tab). Must match the other tabs and src/config.ts FIELDS.
@@ -38,8 +56,15 @@ var HEADER_TEMPLATE = [
   'EX', 'COMMODITY', 'COD', 'T/O TIME', 'TMR MOBILE NO'
 ];
 
+// Column headers that are spelled differently on some tabs -> the canonical
+// HEADER_TEMPLATE name (the record key the app uses). Keep in sync with
+// HEADER_ALIASES in src/config.ts.
+var HEADER_ALIASES = {
+  'RAKE-ID': 'RAKE-ID (IF-CC RAKE)'
+};
+
 var ID_HEADER = '_ID';
-var API_VERSION = 1;
+var API_VERSION = 3;
 var DEFAULT_LIMIT = 500;
 
 // ============ ENTRY POINTS ============
@@ -77,6 +102,24 @@ function safeRoute(req) {
   }
 }
 
+/** Opens the shared OUT REPORTS workbook configured above. */
+function getSpreadsheet() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+/** Returns an approved tab from the shared workbook. */
+function getSheet(sheetName) {
+  sheetName = resolveSheetName(sheetName);
+  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) {
+    throw new Error('Unknown sheet: ' + sheetName);
+  }
+  var sheet = getSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) {
+    throw new Error('Sheet tab not found: ' + sheetName);
+  }
+  return sheet;
+}
+
 // ============ ROUTER ============
 
 function route(req) {
@@ -86,13 +129,15 @@ function route(req) {
     return { ok: true, version: API_VERSION };
   }
 
-  var sheetName = String(req.sheet || '');
+  var sheetName = resolveSheetName(req.sheet);
   if (ALLOWED_SHEETS.indexOf(sheetName) === -1) {
     return { ok: false, error: 'BAD_SHEET', message: 'Unknown sheet: ' + sheetName };
   }
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) {
-    return { ok: false, error: 'BAD_SHEET', message: 'Sheet tab not found: ' + sheetName };
+  var sheet;
+  try {
+    sheet = getSheet(sheetName);
+  } catch (err) {
+    return { ok: false, error: 'BAD_SHEET', message: String(err.message || err) };
   }
 
   switch (action) {
@@ -138,6 +183,18 @@ function pinError() {
 
 // ============ HELPERS ============
 
+/** Old or current tab name (any surrounding whitespace) -> current tab name. */
+function resolveSheetName(name) {
+  var n = String(name || '').trim();
+  return SHEET_ALIASES.hasOwnProperty(n) ? SHEET_ALIASES[n] : n;
+}
+
+/** Raw header cell -> canonical header name ('' for a blank cell). */
+function canonicalHeader(raw) {
+  var h = String(raw == null ? '' : raw).trim();
+  return HEADER_ALIASES.hasOwnProperty(h) ? HEADER_ALIASES[h] : h;
+}
+
 /** Returns 1-based column index of _ID, creating the header if missing. */
 function ensureIdColumn(sheet) {
   var lastCol = sheet.getLastColumn();
@@ -155,7 +212,7 @@ function ensureIdColumn(sheet) {
   }
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   for (var i = 0; i < headers.length; i++) {
-    if (String(headers[i]).trim() === ID_HEADER) return i + 1;
+    if (canonicalHeader(headers[i]) === ID_HEADER) return i + 1;
   }
   // Grow the grid if the sheet has no spare column to hold _ID.
   if (sheet.getMaxColumns() <= lastCol) {
@@ -210,8 +267,9 @@ function apiSave(sheet, id, record) {
   var lastCol = sheet.getLastColumn();
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   var row = headers.map(function (h) {
-    var header = String(h).trim();
+    var header = canonicalHeader(h);
     if (header === ID_HEADER) return id;
+    if (header === '') return '';
     return record.hasOwnProperty(header) ? String(record[header]) : '';
   });
   // Write as plain text (format '@'), NOT appendRow: typed-input coercion
@@ -243,8 +301,8 @@ function apiUpdate(sheet, id, record) {
   // would flatten formulas/typed values in any legacy column, and coercion
   // would corrupt them further. Cells are written as plain text.
   for (var i = 0; i < headers.length; i++) {
-    var header = String(headers[i]).trim();
-    if (header === ID_HEADER) continue;
+    var header = canonicalHeader(headers[i]);
+    if (header === ID_HEADER || header === '') continue;
     if (!record.hasOwnProperty(header)) continue;
     var cell = sheet.getRange(rowNum, i + 1);
     cell.setNumberFormat('@');
@@ -310,9 +368,12 @@ function apiList(sheet, limit) {
 
   var headers = [];
   var dataColIdx = []; // 0-based indexes of non-_ID columns
+  // Headers go out canonicalised (aliases resolved, blank cells dropped) so
+  // the client can key records by the same names on every tab.
   for (var c = 0; c < headerRow.length; c++) {
-    if (String(headerRow[c]).trim() === ID_HEADER) continue;
-    headers.push(headerRow[c]);
+    var h = canonicalHeader(headerRow[c]);
+    if (h === ID_HEADER || h === '') continue;
+    headers.push(h);
     dataColIdx.push(c);
   }
 
@@ -334,9 +395,7 @@ function apiList(sheet, limit) {
 // The original Index.html calls these via google.script.run.
 
 function saveRecord(sheetName, record) {
-  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) throw new Error('Unknown sheet: ' + sheetName);
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+  var sheet = getSheet(sheetName);
   var result = withLock(function () {
     return apiSave(sheet, Utilities.getUuid(), record);
   });
@@ -345,9 +404,7 @@ function saveRecord(sheetName, record) {
 }
 
 function getSheetData(sheetName) {
-  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) throw new Error('Unknown sheet: ' + sheetName);
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+  var sheet = getSheet(sheetName);
 
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
@@ -372,9 +429,7 @@ function getSheetData(sheetName) {
 }
 
 function deleteRecord(sheetName, rowNumber) {
-  if (ALLOWED_SHEETS.indexOf(sheetName) === -1) throw new Error('Unknown sheet: ' + sheetName);
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+  var sheet = getSheet(sheetName);
   var result = withLock(function () {
     var n = Number(rowNumber);
     if (!n || n < 2 || n > sheet.getLastRow()) throw new Error('Invalid row: ' + rowNumber);

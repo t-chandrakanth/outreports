@@ -16,26 +16,53 @@ const sheets = new Map(); // name -> { headers, rows: [{id, cells}] }
 const HEADERS = ['DATE','TR.NO','LOCO NO','LOCO BASE AND DUE','LOAD','B.UP','BPC NO',
   'RAKE-ID (IF-CC RAKE)','ISSUED AT','ISSUED ON','BP%','VALIDITY','VALID UPTO','EX','COMMODITY',
   'COD','T/O TIME','TMR MOBILE NO'];
-const ALLOWED = ['SNF-WADI UP','WADI-SNF DN','MTMI-DKJ UP','MTMI-DKJ DN','BPA-BPQ UP',
-  'BPQ-BPA DN','NZB-RDM UP','RDM-NZB DN','RC-DN','HYB-DN',
-  'SNF-KZJ','KZJ-SNF','BDCR-DKJ','DKJ-BDCR','VKB-BIDR-PRLI-LTRR'];
-for (const s of ALLOWED) sheets.set(s, { rows: [] });
-// seed one legacy-style row
-sheets.get('SNF-WADI UP').rows.push({ id: crypto.randomUUID(), cells: ['08-09 21:15','KPCC','60426','KZJ 28/09','58/58/5200','','','','','','90','','','','','','',''] });
+const ALLOWED = ['SNF-WADICT UP','WADICT-SNF DN','DKJ-MTMIVNUP UP','MTMI-DKJ DN','VNUP-MTMI',
+  'BPA-BPQ UP','BPQ-BPA DN','NZB-RDM UP','RDM-NZB DN','RC-WADICT DN','RC-CTWADI UP','HYB-DN',
+  'SNF-KZJ','KZJ-SNF','VNUP-PGDP-SNF','BDCR-DKJ','DKJ-BDCR','VKB-BIDR-PRLILTRR','PRLILTRR-BIDR-VKB'];
+// Keep both alias tables identical to apps-script/Code.gs and src/config.ts.
+const SHEET_ALIASES = {
+  'SNF-WADI UP': 'SNF-WADICT UP',
+  'WADI-SNF DN': 'WADICT-SNF DN',
+  'MTMI-DKJ UP': 'DKJ-MTMIVNUP UP',
+  'RC-DN': 'RC-WADICT DN',
+  'VKB-BIDR-PRLI-LTRR': 'VKB-BIDR-PRLILTRR',
+};
+const HEADER_ALIASES = { 'RAKE-ID': 'RAKE-ID (IF-CC RAKE)' };
+const resolveSheetName = (name) => {
+  const n = String(name ?? '').trim();
+  return Object.hasOwn(SHEET_ALIASES, n) ? SHEET_ALIASES[n] : n;
+};
+const canonicalHeader = (raw) => {
+  const h = String(raw ?? '').trim();
+  return Object.hasOwn(HEADER_ALIASES, h) ? HEADER_ALIASES[h] : h;
+};
+// Each tab keeps its own raw header row, like the real workbook.
+for (const s of ALLOWED) sheets.set(s, { headers: [...HEADERS], rows: [] });
+// Real-sheet quirks: three tabs spell the rake-id header without its suffix,
+// and one tab has a stray blank header cell.
+for (const s of ['SNF-WADICT UP', 'RC-CTWADI UP', 'SNF-KZJ']) {
+  sheets.get(s).headers = HEADERS.map((h) => (h === 'RAKE-ID (IF-CC RAKE)' ? 'RAKE-ID' : h));
+}
+sheets.get('BPA-BPQ UP').headers.push('');
+// seed one legacy-style row (cells align with that tab's raw header row)
+sheets.get('SNF-WADICT UP').rows.push({ id: crypto.randomUUID(), cells: ['08-09 21:15','KPCC','60426','KZJ 28/09','58/58/5200','','','CC-1234','','','90','','','','','','',''] });
 
 const pending = new Map(); // token -> json string
 
 function route(req) {
   try {
     const action = String(req.action || '');
-    if (action === 'ping') return { ok: true, version: 1 };
-    const name = String(req.sheet || '');
+    if (action === 'ping') return { ok: true, version: 3 };
+    const name = resolveSheetName(req.sheet);
     if (!ALLOWED.includes(name)) return { ok: false, error: 'BAD_SHEET', message: 'Unknown sheet: ' + name };
     const sheet = sheets.get(name);
+    const canon = sheet.headers.map(canonicalHeader);
     if (action === 'list') {
       const limit = Number(req.limit) || 500;
-      const rows = [...sheet.rows].reverse().slice(0, limit);
-      return { ok: true, headers: HEADERS, rows, total: sheet.rows.length };
+      const keep = canon.map((h, i) => (h === '' ? -1 : i)).filter((i) => i !== -1);
+      const rows = [...sheet.rows].reverse().slice(0, limit)
+        .map((r) => ({ id: r.id, cells: keep.map((i) => r.cells[i] ?? '') }));
+      return { ok: true, headers: keep.map((i) => canon[i]), rows, total: sheet.rows.length };
     }
     if (action === 'save') {
       const id = String(req.id || '').trim();
@@ -43,13 +70,13 @@ function route(req) {
       const mobile = String(req.record?.['TMR MOBILE NO'] || '').trim();
       if (mobile && !/^[0-9]{10}$/.test(mobile)) return { ok: false, error: 'VALIDATION', message: 'TMR MOBILE NO must be 10 digits' };
       if (sheet.rows.some((r) => r.id === id)) return { ok: true, id, duplicate: true };
-      sheet.rows.push({ id, cells: HEADERS.map((h) => String(req.record?.[h] ?? '')) });
+      sheet.rows.push({ id, cells: canon.map((h) => (h === '' ? '' : String(req.record?.[h] ?? ''))) });
       return { ok: true, id };
     }
     if (action === 'update') {
       const row = sheet.rows.find((r) => r.id === req.id);
       if (!row) return { ok: false, error: 'NOT_FOUND', message: 'Record not found' };
-      row.cells = HEADERS.map((h, i) => (req.record && h in req.record ? String(req.record[h]) : row.cells[i]));
+      row.cells = canon.map((h, i) => (h !== '' && req.record && h in req.record ? String(req.record[h]) : row.cells[i]));
       return { ok: true, id: req.id };
     }
     if (action === 'delete') {
