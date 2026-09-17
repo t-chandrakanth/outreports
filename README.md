@@ -63,19 +63,21 @@ To rename a tab: rename it in the sheet, update `ALLOWED_SHEETS` and
 Installed apps and offline-queued entries keep sending the old name until they
 update, and the alias keeps them working.
 
-Current tiles and tabs (one tab per direction):
+Current tiles and tabs (the app shows each tab as an Up/Down direction under
+its tile; the tab name is only used for the API):
 
-| Tile | Tabs |
-|---|---|
-| WADI | `SNF-WADI/CT UP`, `WADI/CT-SNF DN` |
-| MTMI | `DKJ-MTMI/VNUP UP`, `MTMI-DKJ DN`, `VNUP-MTMI` |
-| BPQ | `BPA-BPQ UP`, `BPQ-BPA DN` |
-| NZB | `NZB-RDM UP`, `RDM-NZB DN` |
-| RC | `RC-CT/WADI UP`, `RC-WADI/CT DN` |
-| HYB | `HYB-DN` |
-| SNF | `SNF-KZJ`, `KZJ-SNF`, `VNUP-PGDP-SNF` |
-| BDCR | `BDCR-DKJ`, `DKJ-BDCR` |
-| VKB-BIDR-PRLI-LTRR | `VKB-BIDR-PRLI/LTRR`, `PRLI/LTRR-BIDR-VKB` |
+| Tile | Up | Down | Other |
+|---|---|---|---|
+| WADI | `SNF-WADI/CT UP` | `WADI/CT-SNF DN` | |
+| MTMI | `DKJ-MTMI/VNUP UP` | `MTMI-DKJ DN` | `VNUP-MTMI` |
+| BPQ | `BPA-BPQ UP` | `BPQ-BPA DN` | |
+| NZB | `NZB-RDM UP` | `RDM-NZB DN` | |
+| SNF | `SNF-KZJ` | `KZJ-SNF` | |
+| BDCR | `BDCR-DKJ` | `DKJ-BDCR` | |
+| BIDR | `VKB-BIDR-PRLI/LTRR` | `PRLI/LTRR-BIDR-VKB` | |
+| RC | `RC-CT/WADI UP` | `RC-WADI/CT DN` | |
+| HYB | | `HYB-DN` | |
+| VNUP-PGDP-SNF | | | `VNUP-PGDP-SNF` |
 
 `Sheet12` in the workbook is a hand-made archive of older rows and is
 deliberately not listed.

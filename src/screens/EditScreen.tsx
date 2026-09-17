@@ -8,6 +8,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { useTranslation } from 'react-i18next';
 import { EntryForm, type EditTarget } from '../components/EntryForm';
 import { useBackClose, useBackGuard, useNav } from '../nav/NavContext';
+import { sheetTitle } from '../utils/sheetTitle';
 import { Screen } from './Screen';
 
 interface Props {
@@ -32,7 +33,7 @@ export function EditScreen({ sheet, target, onDone }: Props) {
   }
 
   return (
-    <Screen title={t('edit.title')} subtitle={sheet} scroll={false}>
+    <Screen title={t('edit.title')} subtitle={sheetTitle(t, sheet)} scroll={false}>
       <EntryForm
         sheet={sheet}
         edit={target}

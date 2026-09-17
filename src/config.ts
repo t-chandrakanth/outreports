@@ -8,22 +8,51 @@
 import type { Dictionary } from './i18n/locales/en';
 import { formatDateTime } from './utils/date';
 
-export interface Location {
-  code: string;
-  directions: string[]; // sheet names
+/** One workbook tab, shown under its home-screen tile as a direction. */
+export interface Direction {
+  /** Display label: 'Up' / 'Down' (translated in the UI) or a literal name. */
+  label: string;
+  /** Exact Google Sheet tab name sent to the API. */
+  sheet: string;
 }
 
+export interface Location {
+  code: string;
+  directions: Direction[];
+}
+
+const UP = 'Up';
+const DOWN = 'Down';
+
+/** Home-screen tiles in display order. Tab names must match ALLOWED_SHEETS in apps-script/Code.gs. */
 export const LOCATIONS: Location[] = [
-  { code: 'WADI', directions: ['SNF-WADI/CT UP', 'WADI/CT-SNF DN'] },
-  { code: 'MTMI', directions: ['DKJ-MTMI/VNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI'] },
-  { code: 'BPQ', directions: ['BPA-BPQ UP', 'BPQ-BPA DN'] },
-  { code: 'NZB', directions: ['NZB-RDM UP', 'RDM-NZB DN'] },
-  { code: 'RC', directions: ['RC-CT/WADI UP', 'RC-WADI/CT DN'] },
-  { code: 'HYB', directions: ['HYB-DN'] },
-  { code: 'SNF', directions: ['SNF-KZJ', 'KZJ-SNF', 'VNUP-PGDP-SNF'] },
-  { code: 'BDCR', directions: ['BDCR-DKJ', 'DKJ-BDCR'] },
-  { code: 'VKB-BIDR-PRLI-LTRR', directions: ['VKB-BIDR-PRLI/LTRR', 'PRLI/LTRR-BIDR-VKB'] },
+  { code: 'WADI', directions: [{ label: UP, sheet: 'SNF-WADI/CT UP' }, { label: DOWN, sheet: 'WADI/CT-SNF DN' }] },
+  {
+    code: 'MTMI',
+    directions: [
+      { label: UP, sheet: 'DKJ-MTMI/VNUP UP' },
+      { label: DOWN, sheet: 'MTMI-DKJ DN' },
+      { label: 'VNUP-MTMI', sheet: 'VNUP-MTMI' },
+    ],
+  },
+  { code: 'BPQ', directions: [{ label: UP, sheet: 'BPA-BPQ UP' }, { label: DOWN, sheet: 'BPQ-BPA DN' }] },
+  { code: 'NZB', directions: [{ label: UP, sheet: 'NZB-RDM UP' }, { label: DOWN, sheet: 'RDM-NZB DN' }] },
+  { code: 'SNF', directions: [{ label: UP, sheet: 'SNF-KZJ' }, { label: DOWN, sheet: 'KZJ-SNF' }] },
+  { code: 'BDCR', directions: [{ label: UP, sheet: 'BDCR-DKJ' }, { label: DOWN, sheet: 'DKJ-BDCR' }] },
+  { code: 'BIDR', directions: [{ label: UP, sheet: 'VKB-BIDR-PRLI/LTRR' }, { label: DOWN, sheet: 'PRLI/LTRR-BIDR-VKB' }] },
+  { code: 'RC', directions: [{ label: UP, sheet: 'RC-CT/WADI UP' }, { label: DOWN, sheet: 'RC-WADI/CT DN' }] },
+  { code: 'HYB', directions: [{ label: DOWN, sheet: 'HYB-DN' }] },
+  { code: 'VNUP-PGDP-SNF', directions: [{ label: 'VNUP-PGDP-SNF', sheet: 'VNUP-PGDP-SNF' }] },
 ];
+
+/** Tile code + direction label for a tab name; the tab name itself when unknown. */
+export function describeSheet(sheet: string): { code: string; label: string } | null {
+  for (const loc of LOCATIONS) {
+    const d = loc.directions.find((x) => x.sheet === sheet);
+    if (d) return { code: loc.code, label: d.label };
+  }
+  return null;
+}
 
 /**
  * Former tab names -> current tab names. Entries queued offline (and older

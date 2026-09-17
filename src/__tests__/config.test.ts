@@ -1,23 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { FIELDS, HEADER_ALIASES, LOCATIONS, SHEET_ALIASES, canonicalHeader, canonicalSheet } from '../config';
+import { FIELDS, HEADER_ALIASES, LOCATIONS, SHEET_ALIASES, canonicalHeader, canonicalSheet, describeSheet } from '../config';
 
 describe('LOCATIONS', () => {
   it('lists every workbook tab under its home-screen tile, in order', () => {
-    expect(LOCATIONS).toEqual([
-      { code: 'WADI', directions: ['SNF-WADI/CT UP', 'WADI/CT-SNF DN'] },
-      { code: 'MTMI', directions: ['DKJ-MTMI/VNUP UP', 'MTMI-DKJ DN', 'VNUP-MTMI'] },
-      { code: 'BPQ', directions: ['BPA-BPQ UP', 'BPQ-BPA DN'] },
-      { code: 'NZB', directions: ['NZB-RDM UP', 'RDM-NZB DN'] },
-      { code: 'RC', directions: ['RC-CT/WADI UP', 'RC-WADI/CT DN'] },
-      { code: 'HYB', directions: ['HYB-DN'] },
-      { code: 'SNF', directions: ['SNF-KZJ', 'KZJ-SNF', 'VNUP-PGDP-SNF'] },
-      { code: 'BDCR', directions: ['BDCR-DKJ', 'DKJ-BDCR'] },
-      { code: 'VKB-BIDR-PRLI-LTRR', directions: ['VKB-BIDR-PRLI/LTRR', 'PRLI/LTRR-BIDR-VKB'] },
+    expect(LOCATIONS.map((l) => [l.code, l.directions.map((d) => `${d.label}=${d.sheet}`)])).toEqual([
+      ['WADI', ['Up=SNF-WADI/CT UP', 'Down=WADI/CT-SNF DN']],
+      ['MTMI', ['Up=DKJ-MTMI/VNUP UP', 'Down=MTMI-DKJ DN', 'VNUP-MTMI=VNUP-MTMI']],
+      ['BPQ', ['Up=BPA-BPQ UP', 'Down=BPQ-BPA DN']],
+      ['NZB', ['Up=NZB-RDM UP', 'Down=RDM-NZB DN']],
+      ['SNF', ['Up=SNF-KZJ', 'Down=KZJ-SNF']],
+      ['BDCR', ['Up=BDCR-DKJ', 'Down=DKJ-BDCR']],
+      ['BIDR', ['Up=VKB-BIDR-PRLI/LTRR', 'Down=PRLI/LTRR-BIDR-VKB']],
+      ['RC', ['Up=RC-CT/WADI UP', 'Down=RC-WADI/CT DN']],
+      ['HYB', ['Down=HYB-DN']],
+      ['VNUP-PGDP-SNF', ['VNUP-PGDP-SNF=VNUP-PGDP-SNF']],
     ]);
   });
 
+  it('labels every direction Up/Down unless the tab is a corridor of its own', () => {
+    for (const loc of LOCATIONS) {
+      const labels = loc.directions.map((d) => d.label);
+      expect(new Set(labels).size).toBe(labels.length);
+      for (const d of loc.directions) expect(['Up', 'Down', d.sheet]).toContain(d.label);
+    }
+  });
+
+  it('describeSheet finds the tile and label for a tab, null otherwise', () => {
+    expect(describeSheet('PRLI/LTRR-BIDR-VKB')).toEqual({ code: 'BIDR', label: 'Down' });
+    expect(describeSheet('VNUP-PGDP-SNF')).toEqual({ code: 'VNUP-PGDP-SNF', label: 'VNUP-PGDP-SNF' });
+    expect(describeSheet('Sheet12')).toBeNull();
+  });
+
   it('has unique sheet names and location codes', () => {
-    const sheets = LOCATIONS.flatMap((l) => l.directions);
+    const sheets = LOCATIONS.flatMap((l) => l.directions.map((d) => d.sheet));
     expect(new Set(sheets).size).toBe(sheets.length);
     const codes = LOCATIONS.map((l) => l.code);
     expect(new Set(codes).size).toBe(codes.length);
@@ -25,7 +40,7 @@ describe('LOCATIONS', () => {
 });
 
 describe('sheet aliases', () => {
-  const current = LOCATIONS.flatMap((l) => l.directions);
+  const current = LOCATIONS.flatMap((l) => l.directions.map((d) => d.sheet));
 
   it('map every former tab name onto a current one, and no current name is an alias key', () => {
     for (const [oldName, newName] of Object.entries(SHEET_ALIASES)) {

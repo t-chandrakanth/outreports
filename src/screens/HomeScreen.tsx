@@ -7,6 +7,7 @@ import InstallMobileIcon from '@mui/icons-material/InstallMobile';
 import { useTranslation } from 'react-i18next';
 import { LOCATIONS, type Location } from '../config';
 import { useNav } from '../nav/NavContext';
+import { directionLabel } from '../utils/sheetTitle';
 import { SyncBadge } from '../components/SyncBadge';
 import { Screen } from './Screen';
 
@@ -22,14 +23,15 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
   const nav = useNav();
   const { t } = useTranslation();
 
-  /** Sheet name under the code; omitted when it would only repeat the code. */
+  /** Direction label under the code; omitted when it would only repeat the code. */
   function caption(loc: Location): string | null {
     if (loc.directions.length > 1) return t('home.directions', { count: loc.directions.length });
-    return loc.directions[0] === loc.code ? null : loc.directions[0];
+    const only = loc.directions[0];
+    return only.label === loc.code ? null : directionLabel(t, only.label);
   }
 
   function pick(loc: Location) {
-    if (loc.directions.length === 1) nav.push({ name: 'sheet', sheet: loc.directions[0] });
+    if (loc.directions.length === 1) nav.push({ name: 'sheet', sheet: loc.directions[0].sheet });
     else nav.push({ name: 'direction', location: loc });
   }
 
@@ -48,7 +50,7 @@ export function HomeScreen({ showInstallHint, onInstall }: Props) {
               borderRadius: 2,
               textAlign: 'left',
               display: 'block',
-              // Long corridor codes (e.g. VKB-BIDR-PRLI-LTRR) do not fit a half-width card on a phone.
+              // Long codes (e.g. VNUP-PGDP-SNF) do not fit a half-width card on a phone.
               gridColumn: loc.code.length > WIDE_CODE_LENGTH ? '1 / -1' : 'auto',
             }}
           >

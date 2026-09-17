@@ -28,6 +28,8 @@ export const te: Dictionary = {
     install: 'ఈ యాప్‌ను మీ ఫోన్‌లో ఇన్‌స్టాల్ చేయండి',
   },
   direction: {
+    up: 'అప్',
+    down: 'డౌన్',
     subtitle: 'దిశను ఎంచుకోండి',
     prompt: 'ఏ అవుట్‌రిపోర్ట్?',
   },

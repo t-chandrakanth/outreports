@@ -28,6 +28,8 @@ export const hi: Dictionary = {
     install: 'इस ऐप को अपने फ़ोन पर इंस्टॉल करें',
   },
   direction: {
+    up: 'अप',
+    down: 'डाउन',
     subtitle: 'दिशा चुनें',
     prompt: 'कौन-सी आउटरिपोर्ट?',
   },

@@ -8,6 +8,7 @@ import { SavedList } from '../components/SavedList';
 import { SwipeablePanels } from '../components/SwipeablePanels';
 import { SyncBadge } from '../components/SyncBadge';
 import { useNav } from '../nav/NavContext';
+import { sheetTitle } from '../utils/sheetTitle';
 import { Screen } from './Screen';
 
 export function SheetScreen({ sheet }: { sheet: string }) {
@@ -48,7 +49,7 @@ export function SheetScreen({ sheet }: { sheet: string }) {
   );
 
   return (
-    <Screen title={sheet} subtitle={t('sheet.subtitle')} actions={<SyncBadge />} bar={tabs} scroll={false}>
+    <Screen title={sheetTitle(t, sheet)} subtitle={t('sheet.subtitle')} actions={<SyncBadge />} bar={tabs} scroll={false}>
       <SwipeablePanels
         index={tab}
         onChange={setTab}

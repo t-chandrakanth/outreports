@@ -7,6 +7,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useTranslation } from 'react-i18next';
 import type { Location } from '../config';
 import { useNav } from '../nav/NavContext';
+import { directionLabel } from '../utils/sheetTitle';
 import { Screen } from './Screen';
 
 export function DirectionScreen({ location }: { location: Location }) {
@@ -19,14 +20,14 @@ export function DirectionScreen({ location }: { location: Location }) {
       </Typography>
       <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <List disablePadding>
-          {location.directions.map((sheet, i) => (
+          {location.directions.map(({ label, sheet }, i) => (
             <ListItemButton
               key={sheet}
               divider={i < location.directions.length - 1}
               sx={{ py: 2 }}
               onClick={() => nav.push({ name: 'sheet', sheet })}
             >
-              <ListItemText primary={sheet} slotProps={{ primary: { fontWeight: 600 } }} />
+              <ListItemText primary={directionLabel(t, label)} slotProps={{ primary: { fontWeight: 600 } }} />
               <ChevronRightIcon sx={{ color: 'text.secondary' }} />
             </ListItemButton>
           ))}

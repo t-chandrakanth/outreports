@@ -33,6 +33,8 @@ export const en = {
     install: 'Install this app on your phone',
   },
   direction: {
+    up: 'Up',
+    down: 'Down',
     subtitle: 'SELECT DIRECTION',
     prompt: 'Which outreport?',
   },
