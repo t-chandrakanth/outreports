@@ -39,8 +39,17 @@ export function SheetScreen({ sheet }: { sheet: string }) {
       textColor="inherit"
       sx={{
         color: '#fff',
-        borderBottom: '2px solid rgba(255,255,255,0.85)',
-        '& .MuiTabs-indicator': { backgroundColor: '#fff', height: 3 },
+        mx: 1.5,
+        mb: 1.75,
+        mt: 0.25,
+        minHeight: 44,
+        p: '4px',
+        borderRadius: '16px',
+        background: 'rgba(255,255,255,0.14)',
+        border: '1px solid rgba(255,255,255,0.2)',
+        '& .MuiTabs-indicator': { height: '100%', borderRadius: '12px', backgroundColor: '#fff', boxShadow: '0 6px 16px -6px rgba(0,0,0,.4)', zIndex: 0 },
+        '& .MuiTab-root': { minHeight: 36, borderRadius: '12px', zIndex: 1, color: 'rgba(255,255,255,.95)', fontWeight: 700, transition: 'color 160ms' },
+        '& .MuiTab-root.Mui-selected': { color: '#14595F' },
       }}
     >
       <Tab id="tab-entry" aria-controls="panel-entry" label={t('sheet.tabEntry')} sx={{ fontWeight: 600 }} />

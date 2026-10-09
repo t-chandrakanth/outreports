@@ -56,7 +56,7 @@ export const theme = createTheme({
     success: { main: chakra.green[600], dark: chakra.green[700], contrastText: '#ffffff' },
     warning: { main: chakra.orange[600], light: chakra.orange[300] },
     error: { main: chakra.red[600], light: chakra.red[300] },
-    background: { default: chakra.gray[50], paper: '#ffffff' },
+    background: { default: '#F2F7F8', paper: '#ffffff' },
     text: { primary: chakra.gray[800], secondary: chakra.gray[600] },
     divider: chakra.gray[200],
   },
@@ -65,23 +65,40 @@ export const theme = createTheme({
     button: { textTransform: 'none', fontWeight: 600 },
     h6: { fontWeight: 700 },
   },
-  shape: { borderRadius: 6 }, // Chakra radii.md
+  shape: { borderRadius: 14 },
   shadows,
   components: {
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        sizeLarge: { minHeight: 52, fontSize: '1.05rem' },
+        root: { borderRadius: 14, fontWeight: 700, letterSpacing: '0.01em', transition: 'transform 120ms, box-shadow 160ms, filter 160ms', '&:active': { transform: 'scale(0.97)' } },
+        sizeLarge: { minHeight: 54, fontSize: '1.05rem' },
+        containedPrimary: { backgroundImage: 'linear-gradient(135deg, #2C7A7B, #1F6F8B)', boxShadow: '0 10px 20px -10px rgba(31,111,139,.9)' },
+        containedSuccess: { backgroundImage: 'linear-gradient(135deg, #2F9E6B, #1F7A52)', boxShadow: '0 12px 22px -10px rgba(31,122,82,.9)' },
+        outlinedInherit: { borderColor: chakra.gray[300], backgroundColor: '#fff' },
       },
     },
     MuiTextField: {
       defaultProps: { variant: 'outlined', fullWidth: true, size: 'medium' },
     },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 14,
+          backgroundColor: '#fff',
+          transition: 'box-shadow 160ms',
+          '&.Mui-focused': { boxShadow: '0 0 0 4px rgba(44,122,123,.18)' },
+          '&.Mui-readOnly': { backgroundColor: '#EEF4F5' },
+        },
+        notchedOutline: { borderColor: chakra.gray[300], borderWidth: 1.5 },
+      },
+    },
+    MuiChip: { styleOverrides: { root: { fontWeight: 700 } } },
     MuiAppBar: { defaultProps: { elevation: 0 } },
     MuiCard: {
       defaultProps: { elevation: 0 },
       styleOverrides: {
-        root: { border: `1px solid ${chakra.gray[200]}`, boxShadow: chakraShadow.sm },
+        root: { border: '1px solid #DDE8EA', borderRadius: 18, boxShadow: '0 1px 2px rgba(16,42,48,.05), 0 10px 24px -14px rgba(16,42,48,.28)' },
       },
     },
   },

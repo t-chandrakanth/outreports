@@ -58,11 +58,11 @@ export function RecordCard({ sheet, entry, onEdit, onDelete }: Props) {
   }
 
   return (
-    <Card component="article" sx={{ mb: 1.5, borderRadius: 2, borderLeft: '4px solid', borderLeftColor: accent }}>
+    <Card component="article" sx={{ mb: 1.5, position: 'relative', overflow: 'hidden', pl: 0.75, '&::before': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: accent === 'transparent' ? 'linear-gradient(#2C7A7B,#1F6F8B)' : undefined, bgcolor: accent === 'transparent' ? undefined : accent } }}>
       <CardActionArea onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5 }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 700 }} noWrap>
+            <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }} noWrap>
               {record[SUMMARY.trainNo] || '—'}
               {record[SUMMARY.locoNo] && (
                 <Typography component="span" sx={{ color: 'text.secondary', fontWeight: 400, ml: 1 }}>

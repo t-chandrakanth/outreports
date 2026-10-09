@@ -15,16 +15,16 @@ export function DirectionScreen({ location }: { location: Location }) {
   const { t } = useTranslation();
   return (
     <Screen title={location.code} subtitle={t('direction.subtitle')}>
-      <Typography variant="subtitle2" component="p" sx={{ color: 'text.secondary', mb: 1.5 }}>
+      <Typography variant="overline" component="p" sx={{ color: 'text.secondary', fontWeight: 800, letterSpacing: '0.14em', mb: 1 }}>
         {t('direction.prompt')}
       </Typography>
-      <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
+      <Paper variant="outlined" sx={{ borderRadius: '20px', overflow: 'hidden', boxShadow: '0 12px 26px -16px rgba(16,42,48,.35)' }}>
         <List disablePadding>
           {location.directions.map(({ label, sheet }, i) => (
             <ListItemButton
               key={sheet}
               divider={i < location.directions.length - 1}
-              sx={{ py: 2 }}
+              sx={{ py: 2.25, '&:active': { bgcolor: 'action.hover' } }}
               onClick={() => nav.push({ name: 'sheet', sheet })}
             >
               <ListItemText primary={directionLabel(t, label)} slotProps={{ primary: { fontWeight: 600 } }} />
