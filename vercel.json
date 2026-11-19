@@ -1,5 +1,5 @@
 {
-  "rewrites": [{ "source": "/((?!_vercel/).*)", "destination": "/index.html" }],
+  "rewrites": [{ "source": "/((?!_vercel/|\\.well-known/).*)", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/assets/(.*)",
